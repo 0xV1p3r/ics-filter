@@ -1,0 +1,12 @@
+services:
+  app:
+    image: ics-filter:latest
+    ports:
+      - 8000:80
+    volumes:
+      - ./blacklist.json:/app/blacklist.json
+      - ./hash_cache.json:/app/hash_cache.json
+      - ./ics_files:/app/ics_files
+      - ./urls.json:/app/urls.json
+    environment:
+      - TZ=Europe/Berlin
