@@ -1,10 +1,15 @@
-from ics import Calendar
-import requests
+import datetime
 import json
 import os
 
+from ics import Calendar
+
+
+def now():
+    return f"{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+
 if not os.path.exists("build_data.json"):
-    print("Nothind to build! Exiting...")
+    print(f"[{now()}] Nothind to build! Exiting...")
     exit()
 
 with open("blacklist.json", "r") as f:
@@ -13,7 +18,7 @@ with open("blacklist.json", "r") as f:
 with open("build_data.json", "r") as f:
     build_data = json.loads(f.read())
 
-print(f"Building {len(build_data)} new ics files...")
+print(f"[{now()}] Building {len(build_data)} new ics files...")
 for calendar in build_data:
     filename = calendar["filename"]
     input_calendar = Calendar(calendar["data"])
@@ -27,4 +32,4 @@ for calendar in build_data:
         f.writelines(output_calendar.serialize_iter())
 
 os.remove("build_data.json")
-print("Finished Build.")
+print(f"[{now()}] Finished Build.")

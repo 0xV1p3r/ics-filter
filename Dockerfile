@@ -1,8 +1,5 @@
 FROM python:3.12-slim
 
-# Install uv.
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
-
 # Install cron
 RUN apt-get update && apt-get -y install cron
 
@@ -10,17 +7,15 @@ RUN apt-get update && apt-get -y install cron
 COPY ./api.py /app/api.py
 COPY ./build.py /app/build.py
 COPY ./fetch.py /app/fetch.py
-COPY ./pyproject.toml /app/pyproject.toml
-COPY ./uv.lock /app/uv.lock
+COPY ./requirements.txt /app/requirements.txt
 
 # Install the application dependencies.
 WORKDIR /app
-RUN uv sync --frozen --no-cache
+RUN pip3 install -r requirements.txt
 
 # Add cron job
-COPY ./build-and-fetch-cron /etc/cron.d/build-and-fetch-cron
-RUN chmod 0644 /etc/cron.d/build-and-fetch-cron
-RUN crontab /etc/cron.d/build-and-fetch-cron
+RUN touch /app/crontab.log
+RUN crontab -l | { cat; echo "30 * * * * cd /app && /usr/local/bin/python3 /app/fetch.py >> /app/crontab.log && /usr/local/bin/python3 /app/build.py >> /app/crontab.log 2>&1"; } | crontab -
 
 # Run the application.
-CMD ["/app/.venv/bin/fastapi", "run", "api.py", "--port", "80", "--host", "0.0.0.0"]
+CMD cron -f & /usr/local/bin/python3 /app/api.py

@@ -1,2 +1,0 @@
-30 * * * * uv run /app/fetch.py && uv run /app/build.py
-

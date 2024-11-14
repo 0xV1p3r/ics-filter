@@ -9,3 +9,9 @@ dependencies = [
     "ics>=0.7.2",
     "requests>=2.32.3",
 ]
+
+[dependency-groups]
+dev = [
+    "isort>=5.13.2",
+    "ruff>=0.7.3",
+]
