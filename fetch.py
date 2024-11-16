@@ -32,7 +32,7 @@ for url in urls:
    
     if stored_hash != hash_from_data:
         print(f"[{now()}] File changed!")
-        to_build.append(filename)
+        to_build.append({"filename": filename, "data": fetched_ics_data})
     else:
         print(f"[{now()}] No change detected.")
 
