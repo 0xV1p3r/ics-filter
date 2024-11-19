@@ -31,8 +31,10 @@ for url in urls:
     stored_hash = hash_cache[filename]
    
     if stored_hash != hash_from_data:
-        print(f"[{now()}] File changed!")
+        print(f"[{now()}] File changed! old: '{stored_hash}' -- new: '{hash_from_data}'")
         to_build.append({"filename": filename, "data": fetched_ics_data})
+        modified_hash_cache = True
+        hash_cache[filename] = hash_from_data
     else:
         print(f"[{now()}] No change detected.")
 
