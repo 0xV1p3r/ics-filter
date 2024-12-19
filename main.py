@@ -1,17 +1,16 @@
 import configparser
 import datetime
 import json
+import os
 
 import requests
 from ics import Calendar, Event
 
+from constants import (BLACKLIST_FILE, CONFIG_FILE, ICS_FILE_LOCATION,
+                       SEPARATOR_LENGTH, URL_FILE)
+from git import REPO_NAME, save_changes, setup, check_for_repo
 from watchdog import check_for_change, get_modified_attributes, run_watchdog
 
-URL_FILE = "urls.json"
-ICS_FILE_LOCATION = "ics_files"
-BLACKLIST_FILE = "blacklist.json"
-CONFIG_FILE = "config.ini"
-SEPARATOR_LENGTH = 30
 
 def now():
     return f"{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
@@ -82,11 +81,11 @@ def send_notification(message: str, user_token, app_token):
         requests.post(url="https://api.pushover.net/1/messages.json",
                       data={"token": app_token, "user": user_token, "message": message},
                       )
+        print(f"[{now()}] Message sent.")
     except requests.exceptions.RequestException as e:
         print(f"[{now()}]An error occurred while sending a message via Pushover: {str(e)}")
 
-def dispatch_reports(reports):
-    config = open_config()
+def dispatch_reports(config, reports):
     for report_data in reports:
         report = report_data["data"]
         calendar = report_data["filename"]
@@ -121,6 +120,7 @@ def dispatch_reports(reports):
 def main():
     data_sets = fetch()
     to_build = []
+    to_sync = []
     reports = []
     for filename in list(data_sets.keys()):
 
@@ -133,12 +133,19 @@ def main():
             to_build.append({"filename": filename, "data": new_data.serialize()})
             report = run_watchdog(Calendar(old_data), new_data)
             reports.append({"filename": filename, "data": report})
+            to_sync.append(filename)
             print(f"[{now()}] Finished report. (Insertions: {len(report['added'])}, Deletions: {len(report['removed'])}, Modifications: {len(report['modified'])}).")
         else:
             print(f"[{now()}] No changes detected.")
 
     build(to_build)
-    dispatch_reports(reports)
+    config = open_config()
+    if config["PUSHOVER"]["enabled"].lower() == "true":
+        dispatch_reports(config, reports)
+    if config["GIT"]["enabled"].lower() == "true":
+        if not check_for_repo():
+            setup(config["GIT"]["url"])
+        save_changes(to_sync)
 
 if __name__ == "__main__":
     main()

@@ -6,11 +6,9 @@ from typing import Any
 
 from ics import Calendar, Event
 
-BLACKLIST_EVENT_FIELD = ["created"]
-DIFF_NEW = 'diff --unchanged-line-format="" --old-line-format="" --new-line-format=":%dn: %L"'
-DIFF_DEL = 'diff --unchanged-line-format="" --old-line-format=":%dn: %L" --new-line-format=""'
-OD_FILE = "/tmp/old_data.ics"
-ND_FILE = "/tmp/new_data.ics"
+from constants import (BLACKLIST_EVENT_FIELD, DIFF_DEL, DIFF_NEW, ND_FILE,
+                       OD_FILE)
+
 
 def execute_command(command):
 

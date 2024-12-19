@@ -10,3 +10,6 @@ services:
       - ./ics_files:/app/ics_files
       - ./urls.json:/app/urls.json
       - ./config.ini:/app/config.ini
+    environment:
+      - GIT_USER=LightningV1p3r
+      - GIT_PASSWORD=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
