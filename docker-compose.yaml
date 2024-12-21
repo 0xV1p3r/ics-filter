@@ -10,6 +10,3 @@ services:
       - ./ics_files:/app/ics_files
       - ./urls.json:/app/urls.json
       - ./config.ini:/app/config.ini
-    environment:
-      - GIT_USER=
-      - GIT_PASSWORD=

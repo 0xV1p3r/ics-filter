@@ -7,7 +7,7 @@ RUN apt-get update && apt-get -y install cron git
 COPY ./api.py /app/api.py
 COPY ./constants.py /app/constants.py
 COPY ./entrypoint.py /app/entrypoint.py
-COPY ./git.py /app/git.py
+COPY ./version_control.py /app/version_control.py
 COPY ./main.py /app/main.py
 COPY ./watchdog.py /app/watchdog.py
 COPY ./requirements.txt /app/requirements.txt

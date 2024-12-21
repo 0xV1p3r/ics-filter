@@ -147,8 +147,8 @@ def main():
             setup_repo(
                 remote_name=config["GIT"]["remote_name"],
                 domain=config["GIT"]["remote_domain"],
-                username=os.getenv(GIT_USER_ENV),
-                password=os.getenv(GIT_PASSWORD_ENV)
+                username=config["GIT"]["username"],
+                password=config["GIT"]["password"]
             )
         sync_repo(to_sync)
 

@@ -14,7 +14,7 @@ def check_for_repo():
     return True
 
 def setup_repo(remote_name, domain, username, password):
-    remote = f"https://{username}:{password}@{domain}/{username}/{remote_name}"
+    remote = f"https://{password}@{domain}/{username}/{remote_name}.git"
     repo = Repo.clone_from(remote, REPO_LOCATION)
 
 def sync_repo(filenames):
