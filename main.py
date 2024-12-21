@@ -7,9 +7,9 @@ import requests
 from ics import Calendar, Event
 
 from constants import (BLACKLIST_FILE, CONFIG_FILE, ICS_FILE_LOCATION,
-                       SEPARATOR_LENGTH, URL_FILE)
-from git import REPO_NAME, save_changes, setup, check_for_repo
+                       SEPARATOR_LENGTH, URL_FILE, GIT_USER_ENV, GIT_PASSWORD_ENV)
 from watchdog import check_for_change, get_modified_attributes, run_watchdog
+from version_control import check_for_repo, setup_repo, sync_repo
 
 
 def now():
@@ -144,8 +144,13 @@ def main():
         dispatch_reports(config, reports)
     if config["GIT"]["enabled"].lower() == "true":
         if not check_for_repo():
-            setup(config["GIT"]["url"])
-        save_changes(to_sync)
+            setup_repo(
+                remote_name=config["GIT"]["remote_name"],
+                domain=config["GIT"]["remote_domain"],
+                username=os.getenv(GIT_USER_ENV),
+                password=os.getenv(GIT_PASSWORD_ENV)
+            )
+        sync_repo(to_sync)
 
 if __name__ == "__main__":
     main()
