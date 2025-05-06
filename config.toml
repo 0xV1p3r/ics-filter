@@ -1,0 +1,9 @@
+calendar_file = ""
+repo_path = ""
+serving_directory = "ics_files"
+
+enable_remote = true
+remote_name = ""
+domain = "github.com"
+username = ""
+token = ""
