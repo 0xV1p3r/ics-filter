@@ -1,0 +1,16 @@
+services:
+  app:
+    image: ics-filter:latest
+    volumes:
+      - /etc/localtime:/etc/localtime
+      - ./calendars.json:/app/calendars.json:ro
+      - ./crontab.log:/app/crontab.log
+      - ./ics_files:/app/ics_files
+  server:
+    image: nginx:alpine-slim
+    ports:
+      - 8080:80
+    volumes:
+      - /etc/localtime:/etc/localtime
+      - ./ics_files:/app/ics_files:ro
+      - ./nginx.conf:/etc/nginx/nginx.conf
