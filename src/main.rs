@@ -152,11 +152,9 @@ fn refresh_serving_directory() {
         if extension.unwrap().to_str() == Some("ics") {
             let filename = entry.file_name();
             if filename.to_str().unwrap().ends_with("_filtered.ics") {
-                fs::copy(
-                    path,
-                    format!("{}/{}", SERVING_DIR, filename.to_str().unwrap()),
-                )
-                .expect("Unable to copy file!");
+                let filename = filename.to_str().unwrap().strip_suffix("_filtered.ics");
+                fs::copy(path, format!("{}/{}.ics", SERVING_DIR, filename.unwrap()))
+                    .expect("Unable to copy file!");
             }
         }
     }
