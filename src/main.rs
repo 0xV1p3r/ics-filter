@@ -155,7 +155,7 @@ fn refresh_serving_directory() {
             if filename.to_str().unwrap().ends_with("_filtered.ics") {
                 fs::copy(
                     path,
-                    format!("{}/{}.ics", SERVING_DIR, filename.to_str().unwrap()),
+                    format!("{}/{}", SERVING_DIR, filename.to_str().unwrap()),
                 )
                 .expect("Unable to copy file!");
             }
