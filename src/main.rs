@@ -16,6 +16,7 @@ static SERVING_DIR: &str = "ics_files";
 #[derive(Debug, Deserialize)]
 struct AppConfig {
     domain: String,
+    email: String,
     remote_enabled: bool,
     remote_name: String,
     username: String,
@@ -78,25 +79,23 @@ fn build_filtered_calendar(calendar: &AppCalendar) {
 
 fn load_repo(config: &AppConfig) -> Repository {
     // TODO: Better error handling (Result & anyhow)
-    let repo;
-    if !Path::new(REPO_PATH).exists() {
-        if !config.remote_enabled {
-            fs::create_dir(REPO_PATH).unwrap();
-            repo = Repository::init(REPO_PATH).unwrap();
-        } else {
-            let url = format!(
-                "https://{}@{}/{}/{}.git",
-                config.token.clone(),
-                config.domain.clone(),
-                config.username.clone(),
-                config.remote_name.clone()
-            );
-            repo = Repository::clone(&url, REPO_PATH).unwrap();
+    match Repository::open(REPO_PATH) {
+        Ok(r) => r,
+        Err(_) => {
+            if !config.remote_enabled {
+                Repository::init(REPO_PATH).unwrap()
+            } else {
+                let url = format!(
+                    "https://{}@{}/{}/{}.git",
+                    config.token.clone(),
+                    config.domain.clone(),
+                    config.username.clone(),
+                    config.remote_name.clone()
+                );
+                Repository::clone(&url, REPO_PATH).unwrap()
+            }
         }
-    } else {
-        repo = Repository::open(REPO_PATH).unwrap();
     }
-    repo
 }
 
 fn load_config() -> AppConfig {
@@ -168,22 +167,31 @@ fn check_repo_for_changes(repository: &Repository) -> bool {
     if statuses.is_empty() { false } else { true }
 }
 
-fn commit_repo_changes(repository: &Repository) {
+fn commit_repo_changes(config: &AppConfig, repository: &Repository) {
     version_control::add_all(repository);
+    let signature = git2::Signature::now(&config.username, &config.email).unwrap();
     if version_control::check_if_no_commits_exist(repository) {
-        version_control::create_initial_commit(repository);
+        version_control::create_initial_commit(repository, signature);
     } else {
-        version_control::commit("AUTOMATED COMMIT", repository);
+        version_control::commit("AUTOMATED COMMIT", repository, signature);
     }
 }
 
 fn main() {
     let calendars = load_calendars(CALENDAR_FILE);
+    let config_exists = Path::new("config.toml").exists();
 
     if !Path::new(REPO_PATH).exists() {
-        match fs::create_dir(REPO_PATH) {
-            Ok(_) => (),
-            Err(e) => panic!("{}", e),
+        if config_exists {
+            // Initialize Git Repo - Either clone or init
+            let config = load_config();
+            load_repo(&config);
+        } else {
+            // Create a simple directory
+            match fs::create_dir(REPO_PATH) {
+                Ok(_) => (),
+                Err(e) => panic!("{}", e),
+            }
         }
     }
 
@@ -193,12 +201,12 @@ fn main() {
         print!(" done.\n");
     }
 
-    if Path::new("config.toml").exists() {
+    if config_exists {
         let config = load_config();
         let repo = load_repo(&config);
         if check_repo_for_changes(&repo) {
             print!("Committing changes...");
-            commit_repo_changes(&repo);
+            commit_repo_changes(&config, &repo);
             if config.remote_enabled {
                 version_control::push_to_remote(
                     &repo,

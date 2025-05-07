@@ -1,6 +1,5 @@
-pub fn create_initial_commit(repo: &git2::Repository) {
+pub fn create_initial_commit(repo: &git2::Repository, signature: git2::Signature) {
     // TODO: Better error handling (Result & anyhow)
-    let signature = repo.signature().unwrap();
     let oid = repo.index().unwrap().write_tree().unwrap();
     let tree = repo.find_tree(oid).unwrap();
     repo.commit(
@@ -30,11 +29,10 @@ pub fn check_if_no_commits_exist(repo: &git2::Repository) -> bool {
     }
 }
 
-pub fn commit(message: &str, repo: &git2::Repository) {
+pub fn commit(message: &str, repo: &git2::Repository, signature: git2::Signature) {
     // TODO: Better error handling (Result & anyhow)
     let mut index = repo.index().unwrap();
     let oid = index.write_tree().unwrap();
-    let signature = repo.signature().unwrap();
     let parent_commit = repo.head().unwrap().peel_to_commit().unwrap();
     let tree = repo.find_tree(oid).unwrap();
     repo.commit(
