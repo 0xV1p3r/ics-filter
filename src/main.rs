@@ -12,14 +12,15 @@ use std::fs;
 use std::fs::read_to_string;
 use std::path::Path;
 
+static CALENDAR_FILE: &str = "calendars.json";
+static REPO_PATH: &str = "calendar_repo";
+static SERVING_DIR: &str = "ics_files";
+
 #[derive(Debug, Deserialize)]
 struct AppConfig {
-    calendar_file: String,
     domain: Option<String>,
     enable_remote: bool,
     remote_name: Option<String>,
-    repo_path: String,
-    serving_directory: String,
     username: Option<String>,
     token: Option<String>,
 }
@@ -33,7 +34,8 @@ struct AppCalendar {
 
 #[derive(Parser)]
 struct CLIArguments {
-    config_file: String,
+    #[arg(long)]
+    config_file: Option<String>,
 }
 
 fn fetch_calendar(url: &String) -> String {
@@ -54,9 +56,9 @@ fn compare_calendars(calendar1: &String, calendar2: &String) -> bool {
     true
 }
 
-fn build_filtered_calendar(calendar: &AppCalendar, config: &AppConfig) {
+fn build_filtered_calendar(calendar: &AppCalendar) {
     // TODO: Better error handling (Result & anyhow)
-    let raw_path = format!("{}/{}.ics", config.repo_path, calendar.name);
+    let raw_path = format!("{}/{}.ics", REPO_PATH, calendar.name);
     let path = Path::new(&raw_path);
 
     let data = read_to_string(path).unwrap();
@@ -76,9 +78,8 @@ fn build_filtered_calendar(calendar: &AppCalendar, config: &AppConfig) {
         }
     }
 
-    //filtered_calendar.name(&parsed_calendar.get_name().unwrap());
     fs::write(
-        format!("{}/{}_filtered.ics", config.repo_path, calendar.name),
+        format!("{}/{}_filtered.ics", REPO_PATH, calendar.name),
         format!("{}", filtered_calendar),
     )
     .unwrap()
@@ -87,10 +88,10 @@ fn build_filtered_calendar(calendar: &AppCalendar, config: &AppConfig) {
 fn load_repo(config: &AppConfig) -> Repository {
     // TODO: Better error handling (Result & anyhow)
     let repo;
-    if !Path::new(&config.repo_path).exists() {
+    if !Path::new(REPO_PATH).exists() {
         if !config.enable_remote {
-            fs::create_dir(&config.repo_path).unwrap();
-            repo = Repository::init(&config.repo_path).unwrap();
+            fs::create_dir(REPO_PATH).unwrap();
+            repo = Repository::init(REPO_PATH).unwrap();
         } else {
             let url = format!(
                 "https://{}@{}/{}/{}.git",
@@ -99,10 +100,10 @@ fn load_repo(config: &AppConfig) -> Repository {
                 config.username.clone().unwrap(),
                 config.remote_name.clone().unwrap()
             );
-            repo = Repository::clone(&url, &config.repo_path).unwrap();
+            repo = Repository::clone(&url, REPO_PATH).unwrap();
         }
     } else {
-        repo = Repository::open(&config.repo_path).unwrap();
+        repo = Repository::open(REPO_PATH).unwrap();
     }
     repo
 }
@@ -119,20 +120,20 @@ fn load_config(file: &String) -> AppConfig {
     config.unwrap()
 }
 
-fn load_calendars(file: &String) -> Vec<AppCalendar> {
+fn load_calendars(file: &str) -> Vec<AppCalendar> {
     // TODO: Better error handling (Result & anyhow)
     let raw_data = read_to_string(file).expect("Unable to open calendar file!");
     serde_json::from_str(&raw_data).expect("Unable to parse calendar file!")
 }
 
-fn pipeline(calendar: &AppCalendar, config: &AppConfig) {
+fn pipeline(calendar: &AppCalendar) {
     let remote_data = fetch_calendar(&calendar.url);
-    let raw_path = format!("{}/{}.ics", config.repo_path, calendar.name);
+    let raw_path = format!("{}/{}.ics", REPO_PATH, calendar.name);
     let file_path = Path::new(&raw_path);
 
     if !file_path.exists() {
         fs::write(file_path, &remote_data).expect("Unable to write file!");
-        build_filtered_calendar(&calendar, config);
+        build_filtered_calendar(&calendar);
         return;
     }
 
@@ -143,12 +144,12 @@ fn pipeline(calendar: &AppCalendar, config: &AppConfig) {
     }
 
     fs::write(file_path, &remote_data).expect("Unable to write file!");
-    build_filtered_calendar(&calendar, config);
+    build_filtered_calendar(&calendar);
 }
 
-fn refresh_serving_directory(config: &AppConfig) {
+fn refresh_serving_directory() {
     // TODO: Better error handling (Result & anyhow)
-    let paths = fs::read_dir(config.repo_path.clone()).unwrap();
+    let paths = fs::read_dir(REPO_PATH).unwrap();
     for entry in paths {
         let entry = entry.unwrap();
         let path = entry.path();
@@ -163,11 +164,7 @@ fn refresh_serving_directory(config: &AppConfig) {
             if filename.to_str().unwrap().ends_with("_filtered.ics") {
                 fs::copy(
                     path,
-                    format!(
-                        "{}/{}.ics",
-                        config.serving_directory,
-                        filename.to_str().unwrap()
-                    ),
+                    format!("{}/{}.ics", SERVING_DIR, filename.to_str().unwrap()),
                 )
                 .expect("Unable to copy file!");
             }
@@ -191,13 +188,23 @@ fn commit_repo_changes(repository: &Repository) {
 
 fn main() {
     let args = CLIArguments::parse();
-    let config = load_config(&args.config_file);
-    let calendars = load_calendars(&config.calendar_file);
+    let config = if args.config_file.is_some() {
+        load_config(&args.config_file.unwrap())
+    } else {
+        AppConfig {
+            enable_remote: false,
+            domain: None,
+            remote_name: None,
+            username: None,
+            token: None,
+        }
+    };
+    let calendars = load_calendars(CALENDAR_FILE);
     let repo = load_repo(&config);
 
     for calendar in calendars {
         print!("Running pipeline for '{}'...", calendar.name);
-        pipeline(&calendar, &config);
+        pipeline(&calendar);
         print!(" done.\n");
     }
 
@@ -211,7 +218,7 @@ fn main() {
                 &config.token.clone().unwrap(),
             );
         }
-        refresh_serving_directory(&config);
+        refresh_serving_directory();
         print!(" done.\n");
     }
 }
