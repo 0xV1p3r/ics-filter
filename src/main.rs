@@ -1,17 +1,19 @@
 mod version_control;
 
 use config::Config;
-use diff;
 use git2::Repository;
 use icalendar::{Calendar, CalendarComponent, Component};
+use regex::Regex;
 use reqwest;
 use serde::Deserialize;
 use serde_json;
+use similar::TextDiff;
 use std::{fs, path::Path};
 
 static CALENDAR_FILE: &str = "calendars.json";
 static REPO_PATH: &str = "calendar_repo";
 static SERVING_DIR: &str = "ics_files";
+static TIMESTAMP_REGEX: &str = r"DTSTAMP:\d{8}T\d{6}Z";
 
 #[derive(Debug, Deserialize)]
 struct AppConfig {
@@ -37,12 +39,11 @@ fn fetch_calendar(url: &String) -> String {
     body
 }
 
-fn compare_calendars(calendar1: &String, calendar2: &String) -> bool {
-    for diff in diff::lines(calendar1, calendar2) {
-        match diff {
-            diff::Result::Both(_, _) => (),
-            diff::Result::Left(_) => return false,
-            diff::Result::Right(_) => return false,
+fn calendars_identical(calendar1: &String, calendar2: &String) -> bool {
+    let regex = Regex::new(TIMESTAMP_REGEX).unwrap();
+    for diff in TextDiff::from_lines(calendar1, calendar2).iter_all_changes() {
+        if !regex.is_match(&diff.to_string()) {
+            return false;
         }
     }
     true
@@ -116,7 +117,7 @@ fn load_calendars(file: &str) -> Vec<AppCalendar> {
     serde_json::from_str(&raw_data).expect("Unable to parse calendar file!")
 }
 
-fn pipeline(calendar: &AppCalendar) {
+fn pipeline(calendar: &AppCalendar) -> bool {
     let remote_data = fetch_calendar(&calendar.url);
     let raw_path = format!("{}/{}.ics", REPO_PATH, calendar.name);
     let file_path = Path::new(&raw_path);
@@ -124,21 +125,28 @@ fn pipeline(calendar: &AppCalendar) {
     if !file_path.exists() {
         fs::write(file_path, &remote_data).expect("Unable to write file!");
         build_filtered_calendar(&calendar);
-        return;
+        return true;
     }
 
     let local_data = fs::read_to_string(file_path).expect("Unable to read local calendar data!");
 
-    if compare_calendars(&local_data, &remote_data) {
-        return;
+    if calendars_identical(&local_data, &remote_data) {
+        return false;
     }
 
     fs::write(file_path, &remote_data).expect("Unable to write file!");
     build_filtered_calendar(&calendar);
+    true
 }
 
 fn refresh_serving_directory() {
     // TODO: Better error handling (Result & anyhow)
+    if !Path::new(SERVING_DIR).exists() {
+        match fs::create_dir(SERVING_DIR) {
+            Ok(_) => (),
+            Err(e) => panic!("{e}"),
+        }
+    }
     let paths = fs::read_dir(REPO_PATH).unwrap();
     for entry in paths {
         let entry = entry.unwrap();
@@ -188,18 +196,25 @@ fn main() {
             // Create a simple directory
             match fs::create_dir(REPO_PATH) {
                 Ok(_) => (),
-                Err(e) => panic!("{}", e),
+                Err(e) => panic!("{e}"),
             }
         }
     }
 
+    let mut changes_occurred = false;
     for calendar in calendars {
         print!("Running pipeline for '{}'...", calendar.name);
-        pipeline(&calendar);
+        let result = pipeline(&calendar);
         print!(" done.\n");
+        if result {
+            changes_occurred = true;
+            println!("Changes detected.")
+        } else {
+            println!("No changes detected.")
+        }
     }
 
-    if config_exists {
+    if config_exists && changes_occurred {
         let config = load_config();
         let repo = load_repo(&config);
         if check_repo_for_changes(&repo) {
@@ -215,7 +230,7 @@ fn main() {
             refresh_serving_directory();
             print!(" done.\n");
         }
-    } else {
+    } else if changes_occurred {
         refresh_serving_directory();
     }
 }
