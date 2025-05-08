@@ -188,6 +188,28 @@ fn commit_repo_changes(config: &AppConfig, repository: &Repository) {
     }
 }
 
+fn notify() {
+    let token = match env::var(GOTIFY_ENV_VAR_TOKEN) {
+        Ok(var) => var,
+        Err(_) => return,
+    };
+    let url = match env::var(GOTIFY_ENV_VAR_URL) {
+        Ok(var) => var,
+        Err(_) => return,
+    };
+
+    let params = [("title", "Update"), ("message", "A Change occurred!")];
+    let url = format!("{}/message?token={}", url, token);
+    let client = reqwest::blocking::Client::new();
+    let resp = client.post(url).form(&params).send();
+
+    if resp.is_err() {
+        eprintln!("Failed to send message!");
+    } else {
+        println!("{:?}", resp.unwrap().text())
+    }
+}
+
 fn main() {
     let calendars = load_calendars(CALENDAR_FILE);
     let config_exists = Path::new("config.toml").exists();
@@ -237,5 +259,9 @@ fn main() {
         }
     } else if changes_occurred {
         refresh_serving_directory();
+    }
+
+    if changes_occurred {
+        notify();
     }
 }
