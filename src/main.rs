@@ -7,10 +7,12 @@ use regex::Regex;
 use reqwest;
 use serde::Deserialize;
 use serde_json;
-use similar::TextDiff;
-use std::{fs, path::Path};
+use similar::{ChangeTag, TextDiff};
+use std::{env, fs, path::Path};
 
 static CALENDAR_FILE: &str = "calendars.json";
+static GOTIFY_ENV_VAR_TOKEN: &str = "GOTIFY_APP_TOKEN";
+static GOTIFY_ENV_VAR_URL: &str = "GOTIFY_APP_URL";
 static REPO_PATH: &str = "calendar_repo";
 static SERVING_DIR: &str = "ics_files";
 static TIMESTAMP_REGEX: &str = r"DTSTAMP:\d{8}T\d{6}Z";
@@ -42,6 +44,9 @@ fn fetch_calendar(url: &String) -> String {
 fn calendars_identical(calendar1: &String, calendar2: &String) -> bool {
     let regex = Regex::new(TIMESTAMP_REGEX).unwrap();
     for diff in TextDiff::from_lines(calendar1, calendar2).iter_all_changes() {
+        if diff.tag() == ChangeTag::Equal {
+            continue;
+        }
         if !regex.is_match(&diff.to_string()) {
             return false;
         }
