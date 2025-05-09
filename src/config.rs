@@ -1,4 +1,4 @@
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use serde::Deserialize;
 use std::{fs::read_to_string, path::Path};
 use url::Url;
@@ -49,7 +49,7 @@ pub fn load_config() -> Result<Config> {
     if !Path::new(CONFIG_FILE).exists() {
         bail!("Config file '{CONFIG_FILE}' not found!")
     }
-    
+
     let data = read_to_string(CONFIG_FILE)?;
     toml::from_str(&data).context("Failed to parse config!")
 }
