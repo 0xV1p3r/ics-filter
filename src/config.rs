@@ -29,7 +29,7 @@ pub struct GotifyConfig {
 #[derive(Deserialize)]
 pub struct GitConfig {
     pub remote: Option<GitRemoteConfig>,
-    pub signature: Option<GitSignatureConfig>,
+    pub signature: GitSignatureConfig,
 }
 
 #[derive(Deserialize)]
