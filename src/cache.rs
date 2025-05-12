@@ -6,6 +6,21 @@ use std::path::Path;
 
 static CACHE_DIR: &str = "cache";
 
+pub fn copy_from_cache(filename: &String, destination: &str) -> Result<()> {
+    let dest = Path::new(destination);
+    let src_raw = format!("{CACHE_DIR}/{filename}");
+    let src = Path::new(&src_raw);
+    if !dest.exists() {
+        bail!("Target path does not exist!")
+    }
+    if !src.exists() {
+        bail!("File '{filename}' does not exist!")
+    }
+    copy(src, dest)?;
+
+    Ok(())
+}
+
 pub fn initialize_cache(config: &Config) -> Result<()> {
     if !Path::new(CACHE_DIR).exists() {
         create_dir(CACHE_DIR).with_context(|| "Failed to create cache directory!")?
