@@ -32,8 +32,9 @@ pub struct GitConfig {
     pub signature: GitSignatureConfig,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct GitRemoteConfig {
+    pub domain: String,
     pub repository: String,
     pub token: String,
     pub username: String,
