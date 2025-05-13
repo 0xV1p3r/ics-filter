@@ -93,6 +93,7 @@ fn pipeline_for_calendar(calendar_config: &CalendarConfig) -> Result<Option<(Str
 
     if !is_cached(&ics_filename) {
         save_to_cache(&raw_ics, &ics_filename)?;
+        build_filtered_calendar(&calendar)?;
         return Ok(None);
     }
 
