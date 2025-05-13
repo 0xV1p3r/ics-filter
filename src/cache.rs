@@ -31,7 +31,11 @@ pub fn initialize_cache(config: &Config) -> Result<()> {
                 continue;
             }
             if extension.unwrap().to_str().unwrap() == "ics" {
-                copy(path, CACHE_DIR).with_context(|| "Failed to copy file to cache!")?;
+                let src = path.clone();
+                let filename = path.file_name().context("Failed to get filename")?;
+                let filename = filename.to_str().context("Failed to convert filename")?;
+                copy(src, &format!("{CACHE_DIR}/{filename}"))
+                    .with_context(|| "Failed to copy file to cache!")?;
             }
         }
     }
