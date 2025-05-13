@@ -7,16 +7,12 @@ use std::path::Path;
 static CACHE_DIR: &str = "cache";
 
 pub fn copy_from_cache(filename: &String, destination: &str) -> Result<()> {
-    let dest = Path::new(destination);
     let src_raw = format!("{CACHE_DIR}/{filename}");
     let src = Path::new(&src_raw);
-    if !dest.exists() {
-        bail!("Target path does not exist!")
-    }
     if !src.exists() {
         bail!("File '{filename}' does not exist!")
     }
-    copy(src, dest)?;
+    copy(src, destination)?;
 
     Ok(())
 }
