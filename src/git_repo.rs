@@ -1,7 +1,9 @@
 use crate::cache::copy_from_cache;
-use crate::config::GitConfig;
-use anyhow::{Context, Result};
+use crate::config::{GitConfig, GitRemoteConfig};
+use anyhow::{Context, Result, bail};
 use git2::{Cred, IndexAddOption, PushOptions, RemoteCallbacks, Repository, Signature};
+use std::path::Path;
+use url::Url;
 
 pub static REPO_PATH: &str = "calendar_repo";
 
@@ -20,6 +22,27 @@ fn check_if_no_commits_exist(repo: &Repository) -> bool {
         Ok(_) => false,
         Err(_) => true,
     }
+}
+
+fn clone_repo(config: &GitRemoteConfig) -> Result<()> {
+    let mut url = Url::parse("https://github.com")?;
+    url.set_host(Some(&config.domain))?;
+
+    let result = url.set_username(&config.username);
+    if result.is_err() {
+        bail!("Failed to add username to URL!")
+    }
+
+    let result = url.set_password(Some(&config.token));
+    if result.is_err() {
+        bail!("Failed to add token to URL!")
+    }
+
+    let url_path = format!("{}/{}.git", config.username, config.repository);
+    url.set_path(&url_path);
+
+    Repository::clone(&url.to_string(), REPO_PATH).with_context(|| "Failed to clone repository")?;
+    Ok(())
 }
 
 fn commit(message: &str, repo: &Repository, signature: Signature) -> Result<()> {
@@ -79,6 +102,28 @@ fn push_to_remote(repo: &Repository, username: &String, password: &String) -> Re
     remote.push::<&str>(&[head_branch_name], Some(&mut push_options))?;
 
     Ok(())
+}
+
+pub fn initialize_repo(config: &GitConfig) -> Result<()> {
+    let repo_path = Path::new(REPO_PATH);
+    if is_git_repo(&repo_path) {
+        return Ok(());
+    }
+
+    if config.remote.is_some() {
+        clone_repo(&config.remote.clone().unwrap())?;
+    } else {
+        Repository::init(repo_path)?;
+    }
+
+    Ok(())
+}
+
+fn is_git_repo(path: &Path) -> bool {
+    match Repository::open(path) {
+        Ok(_) => true,
+        Err(_) => false,
+    }
 }
 
 pub fn update_repo(calendar_names: Vec<String>, config: GitConfig) -> Result<()> {
