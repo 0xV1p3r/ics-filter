@@ -1,7 +1,7 @@
 use crate::config::{Config, GotifyConfig};
 use crate::diff::DiffReport;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use reqwest::blocking::Client;
 use url::Url;
 
@@ -13,8 +13,10 @@ fn notifications_configured(config: &Config) -> bool {
     false
 }
 fn push_messages_gotify(config: &GotifyConfig, messages: Vec<(String, String)>) -> Result<()> {
-    let base = Url::parse(&config.server)?;
-    let mut url = base.join("message")?;
+    let mut url = Url::parse("https://gotify.net")?;
+    url.set_host(Some(&config.server))
+        .with_context(|| "Failed to insert configured domain")?;
+    url.set_path("message");
     url.set_query(Some(&format!("token={}", &config.token)));
     let url_str = url.to_string();
 
