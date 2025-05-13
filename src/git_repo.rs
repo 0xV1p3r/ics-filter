@@ -10,9 +10,11 @@ pub static REPO_PATH: &str = "calendar_repo";
 fn add_all(repo: &Repository) -> Result<()> {
     let mut index = repo
         .index()
-        .with_context(|| "Failed to acquire repo index!")?;
-    index.add_all(&["."], IndexAddOption::DEFAULT, None)?;
-    index.write()?;
+        .with_context(|| "Failed to acquire repo index")?;
+    index
+        .add_all(&["."], IndexAddOption::DEFAULT, None)
+        .with_context(|| "Failed to add all files to index")?;
+    index.write().with_context(|| "Failed to write index")?;
 
     Ok(())
 }
@@ -26,7 +28,8 @@ fn check_if_no_commits_exist(repo: &Repository) -> bool {
 
 fn clone_repo(config: &GitRemoteConfig) -> Result<()> {
     let mut url = Url::parse("https://github.com")?;
-    url.set_host(Some(&config.domain))?;
+    url.set_host(Some(&config.domain))
+        .with_context(|| "Failed to insert configured domain into URL")?;
 
     let result = url.set_username(&config.username);
     if result.is_err() {
@@ -49,9 +52,17 @@ fn commit(message: &str, repo: &Repository, signature: Signature) -> Result<()> 
     let mut index = repo
         .index()
         .with_context(|| "Failed to acquire repo index!")?;
-    let oid = index.write_tree()?;
-    let parent_commit = repo.head()?.peel_to_commit()?;
-    let tree = repo.find_tree(oid)?;
+    let oid = index
+        .write_tree()
+        .with_context(|| "Failed to write index as tree")?;
+    let parent_commit = repo
+        .head()
+        .with_context(|| "Failed to resolve repo HEAD")?
+        .peel_to_commit()
+        .with_context(|| "Failed to get commit")?;
+    let tree = repo
+        .find_tree(oid)
+        .with_context(|| "Failed to lookup reference")?;
     repo.commit(
         Some("HEAD"),
         &signature,
@@ -59,7 +70,8 @@ fn commit(message: &str, repo: &Repository, signature: Signature) -> Result<()> 
         &message,
         &tree,
         &[&parent_commit],
-    )?;
+    )
+    .with_context(|| "Failed to commit")?;
 
     Ok(())
 }
@@ -73,8 +85,14 @@ fn create_commit_message(calendar_names: Vec<String>) -> String {
     format!("AUTOMATED COMMIT -- Updated {modded_files}")
 }
 fn create_initial_commit(repo: &Repository, signature: Signature) -> Result<()> {
-    let oid = repo.index()?.write_tree()?;
-    let tree = repo.find_tree(oid)?;
+    let oid = repo
+        .index()
+        .with_context(|| "Failed to acquire repo index")?
+        .write_tree()
+        .with_context(|| "Failed to write index as tree")?;
+    let tree = repo
+        .find_tree(oid)
+        .with_context(|| "Failed to write index as tree")?;
     repo.commit(
         Some("HEAD"),
         &signature,
@@ -82,16 +100,21 @@ fn create_initial_commit(repo: &Repository, signature: Signature) -> Result<()> 
         "Initial commit",
         &tree,
         &[],
-    )?;
+    )
+    .with_context(|| "Failed to commit")?;
     Ok(())
 }
 
 fn push_to_remote(repo: &Repository, username: &String, password: &String) -> Result<()> {
-    let head_branch = repo.head()?;
+    let head_branch = repo.head().with_context(|| "Failed to resolve repo HEAD")?;
     let head_branch_name = head_branch.name().context("Failed to get branch name!")?;
 
-    let remote_name = repo.branch_upstream_remote(head_branch_name)?;
-    let mut remote = repo.find_remote(remote_name.as_str().unwrap())?;
+    let remote_name = repo
+        .branch_upstream_remote(head_branch_name)
+        .with_context(|| "Failed to retrieve name of upstream remote")?;
+    let mut remote = repo
+        .find_remote(remote_name.as_str().unwrap())
+        .with_context(|| "Failed to fetch remote info")?;
 
     let mut remote_callbacks = RemoteCallbacks::new();
     remote_callbacks.credentials(|_, _, _| Cred::userpass_plaintext(&username, &password));
@@ -99,7 +122,9 @@ fn push_to_remote(repo: &Repository, username: &String, password: &String) -> Re
     let mut push_options = PushOptions::new();
     push_options.remote_callbacks(remote_callbacks);
 
-    remote.push::<&str>(&[head_branch_name], Some(&mut push_options))?;
+    remote
+        .push::<&str>(&[head_branch_name], Some(&mut push_options))
+        .with_context(|| "Failed to push")?;
 
     Ok(())
 }
@@ -111,9 +136,10 @@ pub fn initialize_repo(config: &GitConfig) -> Result<()> {
     }
 
     if config.remote.is_some() {
-        clone_repo(&config.remote.clone().unwrap())?;
+        clone_repo(&config.remote.clone().unwrap())
+            .with_context(|| "Failed to clone repository")?;
     } else {
-        Repository::init(repo_path)?;
+        Repository::init(repo_path).with_context(|| "Failed to initialize repository")?;
     }
 
     Ok(())
@@ -130,25 +156,32 @@ pub fn update_repo(calendar_names: Vec<String>, config: GitConfig) -> Result<()>
     for name in &calendar_names {
         let file1 = format!("{name}.ics");
         let file2 = format!("{name}_filtered.ics");
-        copy_from_cache(&file1, REPO_PATH)?;
-        copy_from_cache(&file2, REPO_PATH)?;
+        let dest1 = format!("{REPO_PATH}/{file1}");
+        let dest2 = format!("{REPO_PATH}/{file2}");
+
+        copy_from_cache(&file1, &dest1)
+            .with_context(|| format!("Failed to copy file '{file1}' from cache"))?;
+        copy_from_cache(&file2, &dest2)
+            .with_context(|| format!("Failed to copy file '{file2}' from cache"))?;
     }
 
-    let repository = Repository::open(REPO_PATH)?;
-    add_all(&repository)?;
+    let repository = Repository::open(REPO_PATH).with_context(|| "Failed to read repo")?;
+    add_all(&repository).with_context(|| "Failed to update index")?;
 
-    let signature = Signature::now(&config.signature.username, &config.signature.email)?;
+    let signature = Signature::now(&config.signature.username, &config.signature.email)
+        .with_context(|| "Failed to create signature")?;
 
     if check_if_no_commits_exist(&repository) {
-        create_initial_commit(&repository, signature)?;
+        create_initial_commit(&repository, signature).with_context(|| "Failed to commit")?;
     } else {
         let msg = create_commit_message(calendar_names);
-        commit(&msg, &repository, signature)?;
+        commit(&msg, &repository, signature).with_context(|| "Failed to commit")?;
     }
 
     if config.remote.is_some() {
         let remote_cfg = &config.remote.unwrap();
-        push_to_remote(&repository, &remote_cfg.username, &remote_cfg.token)?;
+        push_to_remote(&repository, &remote_cfg.username, &remote_cfg.token)
+            .with_context(|| "Failed to push to remote")?;
     }
 
     Ok(())
