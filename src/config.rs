@@ -20,7 +20,7 @@ pub struct CalendarConfig {
     pub url: Url,
 }
 
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 pub struct GotifyConfig {
     pub server: String,
     pub token: String,
