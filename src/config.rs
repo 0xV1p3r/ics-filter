@@ -5,7 +5,7 @@ use url::Url;
 
 static CONFIG_FILE: &str = "config.toml";
 
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 pub struct Config {
     pub calendars: Vec<CalendarConfig>,
     pub git: Option<GitConfig>,
@@ -13,7 +13,7 @@ pub struct Config {
     pub refresh_interval: u8,
 }
 
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 pub struct CalendarConfig {
     pub blacklist: Vec<String>,
     pub name: Option<String>,
@@ -26,13 +26,13 @@ pub struct GotifyConfig {
     pub token: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 pub struct GitConfig {
     pub remote: Option<GitRemoteConfig>,
     pub signature: GitSignatureConfig,
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Clone, Deserialize)]
 pub struct GitRemoteConfig {
     pub domain: String,
     pub repository: String,
@@ -40,7 +40,7 @@ pub struct GitRemoteConfig {
     pub username: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 pub struct GitSignatureConfig {
     pub email: String,
     pub username: String,
