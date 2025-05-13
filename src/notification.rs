@@ -38,18 +38,18 @@ pub fn push_notifications(config: &Config, reports: Vec<(String, DiffReport)>) -
     for report in reports {
         let calendar_name = report.0;
         let report = report.1;
-        let title = format!("{calendar_name} - Event deleted");
+        let title = format!("'{calendar_name}' -- Event deleted");
 
         for msg in report.deletions {
             messages.push((title.clone(), msg))
         }
 
-        let title = format!("{calendar_name} - Event added");
+        let title = format!("'{calendar_name}' -- Event added");
         for msg in report.insertions {
             messages.push((title.clone(), msg))
         }
 
-        let title = format!("{calendar_name} - Event modified");
+        let title = format!("'{calendar_name}' -- Event modified");
         for msg in report.modifications {
             messages.push((title.clone(), msg))
         }
