@@ -10,7 +10,6 @@ pub struct Config {
     pub calendars: Vec<CalendarConfig>,
     pub git: Option<GitConfig>,
     pub gotify: Option<GotifyConfig>,
-    pub refresh_interval: u8,
 }
 
 #[derive(Clone, Deserialize)]
