@@ -76,7 +76,7 @@ fn commit(message: &str, repo: &Repository, signature: Signature) -> Result<()> 
     Ok(())
 }
 
-fn create_commit_message(calendar_names: Vec<String>) -> String {
+fn create_commit_message(calendar_names: &Vec<String>) -> String {
     let mut modded_files = String::new();
     for name in calendar_names {
         modded_files.push_str(&format!("{name},"));
@@ -84,6 +84,7 @@ fn create_commit_message(calendar_names: Vec<String>) -> String {
     modded_files.pop();
     format!("AUTOMATED COMMIT -- Updated {modded_files}")
 }
+
 fn create_initial_commit(repo: &Repository, signature: Signature) -> Result<()> {
     let oid = repo
         .index()
@@ -152,8 +153,8 @@ fn is_git_repo(path: &Path) -> bool {
     }
 }
 
-pub fn update_repo(calendar_names: Vec<String>, config: GitConfig) -> Result<()> {
-    for name in &calendar_names {
+pub fn update_repo(calendar_names: &Vec<String>, config: GitConfig) -> Result<()> {
+    for name in calendar_names {
         let file1 = format!("{name}.ics");
         let file2 = format!("{name}_filtered.ics");
         let dest1 = format!("{REPO_PATH}/{file1}");
