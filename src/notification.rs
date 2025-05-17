@@ -29,15 +29,17 @@ fn push_messages_gotify(config: &GotifyConfig, messages: Vec<(String, String)>) 
     Ok(())
 }
 
-pub fn push_notifications(config: &Config, reports: Vec<(String, DiffReport)>) -> Result<()> {
+pub fn push_notifications(
+    config: &Config,
+    names: &Vec<String>,
+    reports: Vec<DiffReport>,
+) -> Result<()> {
     if !notifications_configured(&config) {
         return Ok(());
     }
 
     let mut messages = Vec::new();
-    for report in reports {
-        let calendar_name = report.0;
-        let report = report.1;
+    for (calendar_name, report) in names.iter().zip(reports) {
         let title = format!("'{calendar_name}' -- Event deleted");
 
         for msg in report.deletions {

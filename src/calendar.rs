@@ -123,15 +123,19 @@ fn pipeline_for_calendar(calendar_config: &CalendarConfig) -> Result<Option<(Str
     )))
 }
 
-pub fn run_pipeline(config: &Config) -> Result<Vec<(String, DiffReport)>> {
+pub fn run_pipeline(config: &Config) -> Result<(Vec<String>, Vec<DiffReport>)> {
     let mut reports = Vec::new();
+    let mut updated_names = Vec::new();
 
     for calendar in &config.calendars {
         match pipeline_for_calendar(calendar)? {
-            Some(r) => reports.push(r),
+            Some(result) => {
+                reports.push(result.1);
+                updated_names.push(result.0)
+            }
             None => (),
         }
     }
 
-    Ok(reports)
+    Ok((updated_names, reports))
 }
