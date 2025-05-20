@@ -67,7 +67,6 @@ fn main() -> Result<()> {
 
     println!("Updating serving directory.");
     update_serving_directory(&updated_files)?;
-    println!("Pushing notifications.");
     push_notifications(&config, &updated_files, reports)?;
 
     if config.git.is_some() {
