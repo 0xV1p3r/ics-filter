@@ -2,6 +2,7 @@ use crate::cache::{is_cached, load_from_cache, save_to_cache};
 use crate::config::{CalendarConfig, Config};
 use crate::diff::{DiffReport, generate_diff_report, raw_ics_identical};
 
+use crate::calendar::PipelineResult::{New, Nothing, Updated};
 use anyhow::{Context, Result, bail};
 use icalendar::{Calendar, CalendarComponent, Component};
 use reqwest::blocking::get;
@@ -11,6 +12,12 @@ struct AppCalendar {
     blacklist: Vec<String>,
     name: String,
     url: Url,
+}
+
+enum PipelineResult {
+    New(String),
+    Nothing,
+    Updated((String, DiffReport)),
 }
 
 fn build_filtered_calendar(calendar: &AppCalendar) -> Result<()> {
@@ -86,7 +93,7 @@ fn get_calendar_name(url: &Url) -> Result<String> {
     Ok(name.to_string())
 }
 
-fn pipeline_for_calendar(calendar_config: &CalendarConfig) -> Result<Option<(String, DiffReport)>> {
+fn pipeline_for_calendar(calendar_config: &CalendarConfig) -> Result<PipelineResult> {
     let calendar = calendar_from_config(calendar_config)?;
     let ics_filename = format!("{}.ics", calendar.name);
     let raw_ics = fetch_calendar(&calendar.url)?;
@@ -94,13 +101,13 @@ fn pipeline_for_calendar(calendar_config: &CalendarConfig) -> Result<Option<(Str
     if !is_cached(&ics_filename) {
         save_to_cache(&raw_ics, &ics_filename)?;
         build_filtered_calendar(&calendar)?;
-        return Ok(None);
+        return Ok(New(calendar.name));
     }
 
     let raw_ics_cached = load_from_cache(&ics_filename)?;
 
     if raw_ics_identical(&raw_ics_cached, &raw_ics)? {
-        return Ok(None);
+        return Ok(Nothing);
     }
 
     build_filtered_calendar(&calendar)?;
@@ -117,7 +124,7 @@ fn pipeline_for_calendar(calendar_config: &CalendarConfig) -> Result<Option<(Str
         Err(e) => bail!("Failed to parse calendar '{}'!\n{e}", calendar.name),
     };
 
-    Ok(Some((
+    Ok(Updated((
         calendar.name,
         generate_diff_report(&old_calendar, &new_calendar)?,
     )))
@@ -129,11 +136,12 @@ pub fn run_pipeline(config: &Config) -> Result<(Vec<String>, Vec<DiffReport>)> {
 
     for calendar in &config.calendars {
         match pipeline_for_calendar(calendar)? {
-            Some(result) => {
+            New(result) => updated_names.push(result),
+            Nothing => (),
+            Updated(result) => {
                 reports.push(result.1);
                 updated_names.push(result.0)
             }
-            None => (),
         }
     }
 
