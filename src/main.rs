@@ -51,20 +51,28 @@ fn main() -> Result<()> {
     let config = load_config()?;
 
     if !already_initialized() {
+        println!("Initializing...");
         initialize(&config)?;
     }
 
+    println!("Running pipeline...");
     let (updated_files, reports) = run_pipeline(&config)?;
 
     if updated_files.is_empty() {
+        println!("No changes detected.");
         return Ok(());
     }
 
+    println!("Changes detected.");
+
+    println!("Updating serving directory.");
     update_serving_directory(&updated_files)?;
+    println!("Pushing notifications.");
     push_notifications(&config, &updated_files, reports)?;
 
     if config.git.is_some() {
         let git_cfg = config.git.unwrap();
+        println!("Updating git repo.");
         update_repo(&updated_files, git_cfg)?;
     }
 
