@@ -1,6 +1,17 @@
-remote_enabled = true
-remote_name = ""
-domain = "github.com"
-email = ""
+[[calendars]]
+url = ""
+blacklist = []
+
+[git.signature]
 username = ""
+email = ""
+
+[git.remote]
+domain = ""
+repository = ""
+username = ""
+token = ""
+
+[gotify]
+server = ""
 token = ""

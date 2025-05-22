@@ -1,20 +1,28 @@
-FROM rust:latest
-
-#Copy the application into the container.
-COPY ./src /app/src
-COPY ./Cargo.toml /app/Cargo.toml
-COPY ./Cargo.lock /app/Cargo.lock
+FROM rust:alpine AS builder
 
 WORKDIR /app
 
+#Copy the application into the container.
+COPY ./src ./src
+COPY ./Cargo.toml ./Cargo.toml
+COPY ./Cargo.lock ./Cargo.lock
+
+RUN ["apk", "add", "musl-dev", "openssl", "openssl-dev", "openssl-libs-static", "--no-cache"]
 RUN ["cargo", "build", "--release"]
 
-RUN ["apt-get", "-y", "update"]
-RUN ["apt-get", "install", "-y", "cron"]
+FROM alpine:3.16
 
-# Add cron job
-RUN ["touch", "/app/crontab.log"]
-RUN crontab -l | { cat; echo "30 * * * * cd /app && /app/target/release/ics-filter >> /app/crontab.log 2>&1"; } | crontab -
+#Install Caddy
+RUN ["apk", "update"]
+RUN ["apk", "add", "caddy", "--no-cache"]
 
-# Run the application.
-CMD cron -f 
+#Setup cron
+RUN ["apk", "add", "busybox-initscripts", "openrc", "--no-cache"]
+RUN crontab -l | { cat; echo "30 * * * * cd /app && ./ics-filter"; } | crontab -
+
+WORKDIR /app
+RUN ["mkdir", "calendar_serving"]
+COPY --from=builder /app/target/release/ics-filter .
+RUN ["chmod", "a+x", "./ics-filter"]
+
+CMD crond -f & caddy file-server --listen :80 --root ./calendar_serving
