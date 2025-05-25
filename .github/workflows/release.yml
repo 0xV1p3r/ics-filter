@@ -22,10 +22,14 @@ jobs:
           password: ${{secrets.PAT_TOKEN}}
 
       - name: 'Build Image'
+        env:
+          VERSION: ${{ github.event.inputs.version }}
         run: |
           docker build . --tag ghcr.io/0xv1p3r/ics-filter:latest --tag ghcr.io/0xv1p3r/ics-filter:${VERSION}
 
       - name: 'Push Image'
+        env:
+          VERSION: ${{ github.event.inputs.version }}
         run: |
           docker push ghcr.io/0xv1p3r/ics-filter:${VERSION}
           docker push ghcr.io/0xv1p3r/ics-filter:latest
