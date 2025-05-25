@@ -1,0 +1,31 @@
+name: Release Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version'
+        required: true
+
+jobs:
+  build-push-image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Checkout GitHub Action'
+        uses: actions/checkout@main
+
+      - name: 'Login to GitHub Container Registry'
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{github.actor}}
+          password: ${{secrets.PAT_TOKEN}}
+
+      - name: 'Build Image'
+        run: |
+          docker build . --tag ghcr.io/0xV1p3r/ics-filter:latest --tag ghcr.io/0xV1p3r/ics-filter:${VERSION}
+
+      - name: 'Push Image'
+        run: |
+          docker push ghcr.io/0xV1p3r/ics-filter:${VERSION}
+          docker push ghcr.io/0xV1p3r/ics-filter:latest
