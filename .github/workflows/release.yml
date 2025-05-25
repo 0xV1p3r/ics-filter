@@ -23,9 +23,9 @@ jobs:
 
       - name: 'Build Image'
         run: |
-          docker build . --tag ghcr.io/0xV1p3r/ics-filter:latest --tag ghcr.io/0xV1p3r/ics-filter:${VERSION}
+          docker build . --tag ghcr.io/0xv1p3r/ics-filter:latest --tag ghcr.io/0xv1p3r/ics-filter:${VERSION}
 
       - name: 'Push Image'
         run: |
-          docker push ghcr.io/0xV1p3r/ics-filter:${VERSION}
-          docker push ghcr.io/0xV1p3r/ics-filter:latest
+          docker push ghcr.io/0xv1p3r/ics-filter:${VERSION}
+          docker push ghcr.io/0xv1p3r/ics-filter:latest
