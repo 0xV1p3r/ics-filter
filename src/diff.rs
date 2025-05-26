@@ -5,6 +5,7 @@ use regex::Regex;
 use similar::{ChangeTag, TextDiff};
 use std::cmp::PartialEq;
 use std::collections::{HashMap, HashSet};
+use std::str::from_utf8;
 
 static TIMESTAMP_REGEX: &str = r"DTSTAMP:\d{8}T\d{6}Z";
 
@@ -154,16 +155,9 @@ fn event_diff_to_str(
     old: &Event,
     new: &Event,
 ) -> Result<String> {
-    let mut fields = vec![String::new(); 6];
+    let mut fields = vec![[String::new(), String::new()]; 6];
     let mut track_fields = [false; 6];
-    let field_strings = [
-        "",
-        "start: ",
-        "end: ",
-        "location: ",
-        "priority: ",
-        "description: ",
-    ];
+    let field_strings = ["", "start", "end", "location", "priority", "description"];
 
     for diff in diffs {
         let idx = match diff.0 {
@@ -178,14 +172,17 @@ fn event_diff_to_str(
         track_fields[idx] = true;
         if diff.1 == ChangeType::Insertion {
             let value = event_field_to_str(&diff.0, new)?;
-            fields[idx] = format!("+ {field_str}{value}");
+            fields[idx] = [field_str.to_string(), format!(" + {value}   ")];
         } else if diff.1 == ChangeType::Deletion {
             let value = event_field_to_str(&diff.0, old)?;
-            fields[idx] = format!("- {field_str}{value}");
+            fields[idx] = [field_str.to_string(), format!(" - {value}   ")];
         } else {
             let old_value = event_field_to_str(&diff.0, old)?;
             let new_value = event_field_to_str(&diff.0, new)?;
-            fields[idx] = format!("  {field_str}{old_value} -> {new_value}");
+            fields[idx] = [
+                field_str.to_string(),
+                format!("   {old_value} -> {new_value}   "),
+            ];
         }
     }
 
@@ -204,13 +201,22 @@ fn event_diff_to_str(
             _ => None,
         };
         let value = event_field_to_str(&event_field.unwrap(), old)?;
-        fields[idx] = format!("  {field_str}{value}");
+        fields[idx] = [field_str.to_string(), format!("   {value}   ")];
     }
 
-    let mut result = String::new();
+    let mut data = Vec::new();
     for field in fields {
-        result.push_str(&format!("{field}\n"));
+        data.push(field);
     }
+    let description = data.pop().unwrap();
+
+    let mut table_output = Vec::new();
+    text_tables::render(&mut table_output, data)
+        .with_context(|| "Failed to construct ASCII table")?;
+    let mut result = from_utf8(&table_output)
+        .with_context(|| "Failed to stringify table")?
+        .to_string();
+    result.push_str(&format!("\n\nDescription:\n\n{}", description[1]));
 
     Ok(result)
 }
@@ -266,10 +272,21 @@ fn event_to_str(event: Event) -> Result<String> {
     };
     let description = event.get_description().unwrap_or("None");
 
-    Ok(format!(
-        "{}\ndate: {}\nstart: {}\nend: {}\nlocation: {}\npriority: {}\ndescription: {}",
-        summary, date, start, end, location, priority, description
-    ))
+    let data = vec![
+        ["", summary],
+        ["date", &date],
+        ["start", &start],
+        ["end", &end],
+        ["location", location],
+        ["priority", &priority],
+        ["description", description],
+    ];
+    let mut table_output = Vec::new();
+    text_tables::render(&mut table_output, data)
+        .with_context(|| "Failed to construct ASCII table")?;
+    let result = from_utf8(&table_output).with_context(|| "Failed to stringify table")?;
+
+    Ok(result.to_string())
 }
 
 pub fn generate_diff_report(old: &Calendar, new: &Calendar) -> Result<DiffReport> {

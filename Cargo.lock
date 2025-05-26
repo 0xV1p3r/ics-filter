@@ -498,6 +498,7 @@ dependencies = [
  "reqwest",
  "serde",
  "similar",
+ "text-tables",
  "toml",
  "url",
 ]
@@ -1275,6 +1276,12 @@ dependencies = [
  "rustix",
  "windows-sys 0.59.0",
 ]
+
+[[package]]
+name = "text-tables"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5dc41925991e82af3c3e21e25a9aad92e72930af57fbcc4b07867a18d1cd0459"
 
 [[package]]
 name = "tinystr"
