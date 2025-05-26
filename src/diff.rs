@@ -1,12 +1,13 @@
 use anyhow::{Context, Result};
 use chrono::NaiveDateTime;
 use icalendar::{Calendar, CalendarComponent, Component, DatePerhapsTime, Event, EventLike};
+use prettytable::{Table, row};
 use regex::Regex;
 use similar::{ChangeTag, TextDiff};
 use std::cmp::PartialEq;
 use std::collections::{HashMap, HashSet};
-use std::str::from_utf8;
 
+static MAX_CELL_WIDTH: usize = 40;
 static TIMESTAMP_REGEX: &str = r"DTSTAMP:\d{8}T\d{6}Z";
 
 #[derive(Default)]
@@ -30,6 +31,7 @@ pub struct DiffReport {
     pub modifications: Vec<String>,
 }
 
+#[derive(PartialEq)]
 enum EventField {
     Description,
     DateEnd,
@@ -153,7 +155,7 @@ fn event_diff_to_str(
     old: &Event,
     new: &Event,
 ) -> Result<String> {
-    let mut fields = vec![[String::new(), String::new()]; 6];
+    let mut fields = vec![[const { String::new() }; 3]; 6];
     let mut track_fields = [false; 6];
     let field_strings = ["", "start", "end", "location", "priority", "description"];
 
@@ -169,18 +171,31 @@ fn event_diff_to_str(
         let field_str = field_strings[idx];
         track_fields[idx] = true;
         if diff.1 == ChangeType::Insertion {
-            let value = event_field_to_str(&diff.0, new)?;
-            fields[idx] = [field_str.to_string(), format!(" + {value}   ")];
+            let mut value = event_field_to_str(&diff.0, new)?;
+
+            if diff.0 == EventField::Description {
+                value = trim_description(value.as_str());
+            }
+
+            fields[idx] = [field_str.to_string(), "None".to_string(), value];
         } else if diff.1 == ChangeType::Deletion {
-            let value = event_field_to_str(&diff.0, old)?;
-            fields[idx] = [field_str.to_string(), format!(" - {value}   ")];
+            let mut value = event_field_to_str(&diff.0, old)?;
+
+            if diff.0 == EventField::Description {
+                value = trim_description(value.as_str());
+            }
+
+            fields[idx] = [field_str.to_string(), value, "None".to_string()];
         } else {
-            let old_value = event_field_to_str(&diff.0, old)?;
-            let new_value = event_field_to_str(&diff.0, new)?;
-            fields[idx] = [
-                field_str.to_string(),
-                format!("   {old_value} -> {new_value}   "),
-            ];
+            let mut old_value = event_field_to_str(&diff.0, old)?;
+            let mut new_value = event_field_to_str(&diff.0, new)?;
+
+            if diff.0 == EventField::Description {
+                old_value = trim_description(old_value.as_str());
+                new_value = trim_description(new_value.as_str());
+            }
+
+            fields[idx] = [field_str.to_string(), old_value, new_value];
         }
     }
 
@@ -199,24 +214,20 @@ fn event_diff_to_str(
             _ => None,
         };
         let value = event_field_to_str(&event_field.unwrap(), old)?;
-        fields[idx] = [field_str.to_string(), format!("   {value}   ")];
+        fields[idx] = [field_str.to_string(), value.clone(), value.clone()];
     }
 
-    let mut data = Vec::new();
+    let mut table = Table::new();
     for field in fields {
-        data.push(field);
+        table.add_row(row![
+            field[0].as_str(),
+            field[1].as_str(),
+            field[2].as_str(),
+        ]);
     }
-    let description = data.pop().unwrap();
 
-    let mut table_output = Vec::new();
-    text_tables::render(&mut table_output, data)
-        .with_context(|| "Failed to construct ASCII table")?;
-    let mut result = from_utf8(&table_output)
-        .with_context(|| "Failed to stringify table")?
-        .to_string();
-    result.push_str(&format!("\n\nDescription:\n\n{}", description[1]));
-
-    Ok(result)
+    table.printstd();
+    Ok(table.to_string())
 }
 
 fn event_field_to_str(event_field: &EventField, event: &Event) -> Result<String> {
@@ -265,24 +276,19 @@ fn event_to_str(event: Event) -> Result<String> {
         None => "None".to_string(),
     };
     let description = event.get_description().unwrap_or("None");
+    let description = trim_description(description);
 
-    let data = vec![
-        ["", summary],
-        ["date", &date],
-        ["start", &start],
-        ["end", &end],
-        ["location", location],
-        ["priority", &priority],
-    ];
-    let mut table_output = Vec::new();
-    text_tables::render(&mut table_output, data)
-        .with_context(|| "Failed to construct ASCII table")?;
-    let mut result = from_utf8(&table_output)
-        .with_context(|| "Failed to stringify table")?
-        .to_string();
-    result.push_str(&format!("\n\nDescription:\n\n{}", description));
+    let mut table = Table::new();
+    table.add_row(row!["", summary]);
+    table.add_row(row!["date", date]);
+    table.add_row(row!["start", start]);
+    table.add_row(row!["end", end]);
+    table.add_row(row!["location", location]);
+    table.add_row(row!["priority", priority]);
+    table.add_row(row!["description", description]);
 
-    Ok(result)
+    table.printstd();
+    Ok(table.to_string())
 }
 
 pub fn generate_diff_report(old: &Calendar, new: &Calendar) -> Result<DiffReport> {
@@ -334,4 +340,22 @@ pub fn raw_ics_identical(old: &String, new: &String) -> Result<bool> {
     }
 
     Ok(true)
+}
+
+fn trim_description(description: &str) -> String {
+    let mut new_description = String::new();
+
+    for line in description.lines() {
+        let line_len = line.len();
+        let new_line;
+        if line_len > MAX_CELL_WIDTH {
+            new_line = textwrap::fill(line, MAX_CELL_WIDTH);
+        } else {
+            new_line = line.to_string();
+        };
+        new_description.push_str(&new_line);
+        new_description.push_str("\n");
+    }
+
+    new_description
 }
