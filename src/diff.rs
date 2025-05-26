@@ -43,7 +43,7 @@ fn date_to_str(date: &DatePerhapsTime) -> Result<(String, String)> {
     let raw = raw.value();
     let date_time = NaiveDateTime::parse_from_str(raw, "%Y%m%dT%H%M%S")?;
 
-    let date = date_time.format("%Y-%m-%d").to_string();
+    let date = date_time.format("%d.%m.%Y").to_string();
     let time = date_time.format("%H:%M").to_string();
 
     Ok((date, time))

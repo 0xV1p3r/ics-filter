@@ -1,8 +1,8 @@
 use crate::cache::{is_cached, load_from_cache, save_to_cache};
+use crate::calendar::PipelineResult::{New, Nothing, Updated};
 use crate::config::{CalendarConfig, Config};
 use crate::diff::{DiffReport, generate_diff_report, raw_ics_identical};
 
-use crate::calendar::PipelineResult::{New, Nothing, Updated};
 use anyhow::{Context, Result, bail};
 use icalendar::{Calendar, CalendarComponent, Component};
 use reqwest::blocking::get;

@@ -3,6 +3,7 @@ use crate::calendar::run_pipeline;
 use crate::config::{Config, load_config};
 use crate::git_repo::{initialize_repo, update_repo};
 use crate::notification::push_notifications;
+
 use anyhow::{Context, Result};
 use std::fs::{File, create_dir};
 use std::path::Path;
