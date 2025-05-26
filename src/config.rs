@@ -9,7 +9,7 @@ static CONFIG_FILE: &str = "config.toml";
 pub struct Config {
     pub calendars: Vec<CalendarConfig>,
     pub git: Option<GitConfig>,
-    pub gotify: Option<GotifyConfig>,
+    pub notifications: Option<NotificationConfig>,
 }
 
 #[derive(Clone, Deserialize)]
@@ -17,6 +17,14 @@ pub struct CalendarConfig {
     pub blacklist: Vec<String>,
     pub name: Option<String>,
     pub url: Url,
+}
+
+#[derive(Clone, Deserialize)]
+pub struct EmailConfig {
+    pub smtp_server: String,
+    pub username: String,
+    pub password: String,
+    pub recipients: Vec<String>,
 }
 
 #[derive(Clone, Deserialize)]
@@ -43,6 +51,12 @@ pub struct GitRemoteConfig {
 pub struct GitSignatureConfig {
     pub email: String,
     pub username: String,
+}
+
+#[derive(Clone, Deserialize)]
+pub struct NotificationConfig {
+    pub email: Option<EmailConfig>,
+    pub gotify: Option<GotifyConfig>,
 }
 
 pub fn load_config() -> Result<Config> {

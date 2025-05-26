@@ -12,6 +12,12 @@ repository = ""
 username = ""
 token = ""
 
-[gotify]
+[notifications.email]
+smtp_server = ""
+username = ""
+password = ""
+recipients = []
+
+[notifications.gotify]
 server = ""
 token = ""
