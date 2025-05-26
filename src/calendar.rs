@@ -110,16 +110,18 @@ fn pipeline_for_calendar(calendar_config: &CalendarConfig) -> Result<PipelineRes
         return Ok(Nothing);
     }
 
+    let old_filtered_cal_raw = load_from_cache(&format!("{}_filtered.ics", calendar.name))?;
     build_filtered_calendar(&calendar)?;
     save_to_cache(&raw_ics, &ics_filename)?;
+    let new_filtered_cal_raw = load_from_cache(&format!("{}_filtered.ics", calendar.name))?;
 
     // Not using with_context() because "the trait bound `std::string::String: StdError` is not satisfied"
-    let old_calendar: Calendar = match raw_ics_cached.parse() {
+    let old_calendar: Calendar = match old_filtered_cal_raw.parse() {
         Ok(data) => data,
         Err(e) => bail!("Failed to parse calendar '{}'!\n{e}", calendar.name),
     };
     // Not using with_context() because "the trait bound `std::string::String: StdError` is not satisfied"
-    let new_calendar: Calendar = match raw_ics.parse() {
+    let new_calendar: Calendar = match new_filtered_cal_raw.parse() {
         Ok(data) => data,
         Err(e) => bail!("Failed to parse calendar '{}'!\n{e}", calendar.name),
     };
