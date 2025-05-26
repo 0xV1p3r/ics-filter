@@ -80,14 +80,10 @@ fn diff_calendars(old: &Calendar, new: &Calendar) -> Result<CalendarDiff> {
         let old = old_events.get(uid);
         let new = new_events.get(uid);
 
-        if let Some(old) = old {
-            if new.is_none() {
-                calendar_diff.deletions.push(old.clone());
-            }
-        } else if let Some(new) = new {
-            if old.is_none() {
-                calendar_diff.deletions.push(new.clone());
-            }
+        if old.is_some() && new.is_none() {
+            calendar_diff.deletions.push(old.unwrap().clone());
+        } else if old.is_none() && new.is_some() {
+            calendar_diff.insertions.push(new.unwrap().clone());
         } else if !events_identical(old.unwrap(), new.unwrap()) {
             calendar_diff
                 .modifications
