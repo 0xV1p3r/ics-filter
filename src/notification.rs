@@ -2,6 +2,7 @@ use crate::config::{Config, EmailConfig, GotifyConfig};
 use crate::diff::DiffReport;
 
 use anyhow::{Context, Result};
+use chrono::Local;
 use lettre::message::{Mailbox, Mailboxes, header::ContentType};
 use lettre::transport::smtp::{SmtpTransport, authentication::Credentials};
 use lettre::{Message, Transport};
@@ -28,7 +29,7 @@ fn push_messages_email(config: &EmailConfig, messages: &Vec<(String, String)>) -
     let to_header: lettre::message::header::To = to_mailboxes.into();
 
     let credentials = Credentials::new(config.username.clone(), config.password.clone());
-    let mailer = SmtpTransport::relay("smtp.gmail.com")?
+    let mailer = SmtpTransport::relay(&config.smtp_server)?
         .credentials(credentials)
         .build();
 
@@ -99,10 +100,18 @@ pub fn push_notifications(
     }
 
     if notification_config.email.is_some() {
+        println!(
+            "[{}] Sending email notifications.",
+            Local::now().format("%Y-%m-%dT%H:%M:%S")
+        );
         push_messages_email(&notification_config.email.clone().unwrap(), &messages)?;
     }
 
     if notification_config.gotify.is_some() {
+        println!(
+            "[{}] Sending gotify notifications.",
+            Local::now().format("%Y-%m-%dT%H:%M:%S")
+        );
         push_messages_gotify(&notification_config.gotify.clone().unwrap(), &messages)?;
     }
 
