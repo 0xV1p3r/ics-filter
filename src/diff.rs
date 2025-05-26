@@ -279,14 +279,16 @@ fn event_to_str(event: Event) -> Result<String> {
         ["end", &end],
         ["location", location],
         ["priority", &priority],
-        ["description", description],
     ];
     let mut table_output = Vec::new();
     text_tables::render(&mut table_output, data)
         .with_context(|| "Failed to construct ASCII table")?;
-    let result = from_utf8(&table_output).with_context(|| "Failed to stringify table")?;
+    let mut result = from_utf8(&table_output)
+        .with_context(|| "Failed to stringify table")?
+        .to_string();
+    result.push_str(&format!("\n\nDescription:\n\n{}", description));
 
-    Ok(result.to_string())
+    Ok(result)
 }
 
 pub fn generate_diff_report(old: &Calendar, new: &Calendar) -> Result<DiffReport> {
