@@ -12,7 +12,7 @@ fn add_all(repo: &Repository) -> Result<()> {
         .index()
         .with_context(|| "Failed to acquire repo index")?;
     index
-        .add_all(&["."], IndexAddOption::DEFAULT, None)
+        .add_all(["."], IndexAddOption::DEFAULT, None)
         .with_context(|| "Failed to add all files to index")?;
     index.write().with_context(|| "Failed to write index")?;
 
@@ -20,10 +20,7 @@ fn add_all(repo: &Repository) -> Result<()> {
 }
 
 fn check_if_no_commits_exist(repo: &Repository) -> bool {
-    match repo.head() {
-        Ok(_) => false,
-        Err(_) => true,
-    }
+    repo.head().is_err()
 }
 
 fn clone_repo(config: &GitRemoteConfig) -> Result<()> {
@@ -44,7 +41,7 @@ fn clone_repo(config: &GitRemoteConfig) -> Result<()> {
     let url_path = format!("{}/{}.git", config.username, config.repository);
     url.set_path(&url_path);
 
-    Repository::clone(&url.to_string(), REPO_PATH).with_context(|| "Failed to clone repository")?;
+    Repository::clone(url.as_ref(), REPO_PATH).with_context(|| "Failed to clone repository")?;
     Ok(())
 }
 
@@ -67,7 +64,7 @@ fn commit(message: &str, repo: &Repository, signature: Signature) -> Result<()> 
         Some("HEAD"),
         &signature,
         &signature,
-        &message,
+        message,
         &tree,
         &[&parent_commit],
     )
@@ -106,7 +103,7 @@ fn create_initial_commit(repo: &Repository, signature: Signature) -> Result<()> 
     Ok(())
 }
 
-fn push_to_remote(repo: &Repository, username: &String, password: &String) -> Result<()> {
+fn push_to_remote(repo: &Repository, username: &str, password: &str) -> Result<()> {
     let head_branch = repo.head().with_context(|| "Failed to resolve repo HEAD")?;
     let head_branch_name = head_branch.name().context("Failed to get branch name!")?;
 
@@ -118,7 +115,7 @@ fn push_to_remote(repo: &Repository, username: &String, password: &String) -> Re
         .with_context(|| "Failed to fetch remote info")?;
 
     let mut remote_callbacks = RemoteCallbacks::new();
-    remote_callbacks.credentials(|_, _, _| Cred::userpass_plaintext(&username, &password));
+    remote_callbacks.credentials(|_, _, _| Cred::userpass_plaintext(username, password));
 
     let mut push_options = PushOptions::new();
     push_options.remote_callbacks(remote_callbacks);
@@ -132,7 +129,8 @@ fn push_to_remote(repo: &Repository, username: &String, password: &String) -> Re
 
 pub fn initialize_repo(config: &GitConfig) -> Result<()> {
     let repo_path = Path::new(REPO_PATH);
-    if is_git_repo(&repo_path) {
+
+    if is_git_repo(repo_path) {
         return Ok(());
     }
 
@@ -147,10 +145,7 @@ pub fn initialize_repo(config: &GitConfig) -> Result<()> {
 }
 
 fn is_git_repo(path: &Path) -> bool {
-    match Repository::open(path) {
-        Ok(_) => true,
-        Err(_) => false,
-    }
+    Repository::open(path).is_ok()
 }
 
 pub fn update_repo(calendar_names: &Vec<String>, config: GitConfig) -> Result<()> {

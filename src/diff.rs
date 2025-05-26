@@ -80,16 +80,18 @@ fn diff_calendars(old: &Calendar, new: &Calendar) -> Result<CalendarDiff> {
         let old = old_events.get(uid);
         let new = new_events.get(uid);
 
-        if old.is_some() && new.is_none() {
-            calendar_diff.deletions.push(old.unwrap().clone());
-        } else if old.is_none() && new.is_some() {
-            calendar_diff.insertions.push(new.unwrap().clone());
-        } else {
-            if !events_identical(old.unwrap(), new.unwrap()) {
-                calendar_diff
-                    .modifications
-                    .push((old.unwrap().clone(), new.unwrap().clone()));
+        if let Some(old) = old {
+            if new.is_none() {
+                calendar_diff.deletions.push(old.clone());
             }
+        } else if let Some(new) = new {
+            if old.is_none() {
+                calendar_diff.deletions.push(new.clone());
+            }
+        } else if !events_identical(old.unwrap(), new.unwrap()) {
+            calendar_diff
+                .modifications
+                .push((old.unwrap().clone(), new.unwrap().clone()));
         }
     }
 
@@ -247,11 +249,7 @@ fn events_identical(event1: &Event, event2: &Event) -> bool {
     let priority = event1.get_priority() == event2.get_priority();
     let summary = event1.get_summary() == event2.get_summary();
 
-    if description && date_end && date_start && location && priority && summary {
-        true
-    } else {
-        false
-    }
+    description && date_end && date_start && location && priority && summary
 }
 
 fn event_to_str(event: Event) -> Result<String> {

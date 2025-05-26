@@ -71,10 +71,10 @@ fn push_messages_gotify(config: &GotifyConfig, messages: &Vec<(String, String)>)
 
 pub fn push_notifications(
     config: &Config,
-    names: &Vec<String>,
+    names: &[String],
     reports: Vec<DiffReport>,
 ) -> Result<()> {
-    if !notifications_configured(&config) {
+    if !notifications_configured(config) {
         return Ok(());
     }
 

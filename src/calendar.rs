@@ -57,7 +57,7 @@ fn build_filtered_calendar(calendar: &AppCalendar) -> Result<()> {
 }
 
 fn calendar_from_config(calendar_config: &CalendarConfig) -> Result<AppCalendar> {
-    let name = if calendar_config.name == None {
+    let name = if calendar_config.name.is_none() {
         get_calendar_name(&calendar_config.url)?
     } else {
         calendar_config.name.clone().unwrap()
@@ -78,10 +78,12 @@ fn fetch_calendar(url: &Url) -> Result<String> {
 }
 
 fn get_calendar_name(url: &Url) -> Result<String> {
-    let segments = url
+    let mut segments = url
         .path_segments()
         .context("Failed to parse URL segments!")?;
-    let last_segment = segments.last().context("Failed to get last URL segment!")?;
+    let last_segment = segments
+        .next_back()
+        .context("Failed to get last URL segment!")?;
     let name = if last_segment.contains('.') {
         last_segment
             .split('.')

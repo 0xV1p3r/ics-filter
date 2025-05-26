@@ -34,7 +34,7 @@ pub fn initialize_cache(config: &Config) -> Result<()> {
                 let src = path.clone();
                 let filename = path.file_name().context("Failed to get filename")?;
                 let filename = filename.to_str().context("Failed to convert filename")?;
-                copy(src, &format!("{CACHE_DIR}/{filename}"))
+                copy(src, format!("{CACHE_DIR}/{filename}"))
                     .with_context(|| "Failed to copy file to cache!")?;
             }
         }
@@ -43,11 +43,7 @@ pub fn initialize_cache(config: &Config) -> Result<()> {
 }
 
 pub fn is_cached(filename: &String) -> bool {
-    if Path::new(&format!("{CACHE_DIR}/{filename}")).exists() {
-        true
-    } else {
-        false
-    }
+    Path::new(&format!("{CACHE_DIR}/{filename}")).exists()
 }
 
 pub fn load_from_cache(filename: &String) -> Result<String> {
@@ -56,12 +52,12 @@ pub fn load_from_cache(filename: &String) -> Result<String> {
     if !path.exists() {
         bail!("File '{filename}' does not exist!")
     }
-    Ok(read_to_string(path).with_context(|| format!("Failed to read file '{filename}'!"))?)
+    read_to_string(path).with_context(|| format!("Failed to read file '{filename}'!"))
 }
 
 pub fn save_to_cache(contents: &String, filename: &String) -> Result<()> {
     let path_as_str = format!("{CACHE_DIR}/{filename}");
     let path = Path::new(&path_as_str);
-    write(&path, contents).with_context(|| format!("Failed to write file '{filename}'!"))?;
+    write(path, contents).with_context(|| format!("Failed to write file '{filename}'!"))?;
     Ok(())
 }
