@@ -18,11 +18,11 @@ RUN ["apk", "add", "caddy", "--no-cache"]
 
 #Setup cron
 RUN ["apk", "add", "busybox-initscripts", "openrc", "--no-cache"]
-RUN crontab -l | { cat; echo "30 * * * * cd /app && ./ics-filter"; } | crontab -
+RUN ["sh", "-c", "crontab -l | { cat; echo \"30 * * * * cd /app && ./ics-filter\"; } | crontab -"]
 
 WORKDIR /app
 RUN ["mkdir", "calendar_serving"]
 COPY --from=builder /app/target/release/ics-filter .
 RUN ["chmod", "a+x", "./ics-filter"]
 
-CMD crond -f & caddy file-server --listen :80 --root ./calendar_serving
+CMD ["sh", "-c", "crond -f & caddy file-server --listen :80 --root ./calendar_serving"]
