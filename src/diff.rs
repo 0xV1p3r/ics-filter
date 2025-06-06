@@ -347,14 +347,13 @@ fn trim_description(description: &str) -> String {
 
     for line in description.lines() {
         let line_len = line.len();
-        let new_line;
-        if line_len > MAX_CELL_WIDTH {
-            new_line = textwrap::fill(line, MAX_CELL_WIDTH);
+        let new_line = if line_len > MAX_CELL_WIDTH {
+            textwrap::fill(line, MAX_CELL_WIDTH)
         } else {
-            new_line = line.to_string();
+            line.to_string()
         };
         new_description.push_str(&new_line);
-        new_description.push_str("\n");
+        new_description.push('\n');
     }
 
     new_description
