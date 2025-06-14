@@ -1,7 +1,8 @@
 use crate::cache::copy_from_cache;
 use crate::config::{GitConfig, GitRemoteConfig};
 use anyhow::{Context, Result, bail};
-use git2::{Cred, IndexAddOption, PushOptions, RemoteCallbacks, Repository, Signature};
+use git2::build::RepoBuilder;
+use git2::{AutotagOption, Cred, FetchOptions, IndexAddOption, PushOptions, RemoteCallbacks, Repository, Signature};
 use std::path::Path;
 use url::Url;
 
@@ -28,20 +29,24 @@ fn clone_repo(config: &GitRemoteConfig) -> Result<()> {
     url.set_host(Some(&config.domain))
         .with_context(|| "Failed to insert configured domain into URL")?;
 
-    let result = url.set_username(&config.username);
-    if result.is_err() {
-        bail!("Failed to add username to URL!")
-    }
-
-    let result = url.set_password(Some(&config.token));
-    if result.is_err() {
-        bail!("Failed to add token to URL!")
-    }
-
     let url_path = format!("{}/{}.git", config.username, config.repository);
     url.set_path(&url_path);
 
-    Repository::clone(url.as_ref(), REPO_PATH).with_context(|| "Failed to clone repository")?;
+    let mut fetch_options = FetchOptions::new();
+    let mut remote_callbacks = RemoteCallbacks::new();
+    let mut repo_builder = RepoBuilder::new();
+    
+    remote_callbacks.credentials(|_, _, _| Cred::userpass_plaintext(&config.username, &config.token));
+
+    fetch_options.remote_callbacks(remote_callbacks)
+        .download_tags(AutotagOption::All)
+        .update_fetchhead(true);
+    
+    repo_builder
+        .fetch_options(fetch_options)
+        .clone(url.as_ref(), Path::new(REPO_PATH))
+        .with_context(|| "Failed to clone repository")?;
+    
     Ok(())
 }
 
