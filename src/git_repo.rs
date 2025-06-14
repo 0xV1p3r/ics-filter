@@ -1,6 +1,6 @@
 use crate::cache::copy_from_cache;
 use crate::config::{GitConfig, GitRemoteConfig};
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result};
 use git2::build::RepoBuilder;
 use git2::{AutotagOption, Cred, FetchOptions, IndexAddOption, PushOptions, RemoteCallbacks, Repository, Signature};
 use std::path::Path;
