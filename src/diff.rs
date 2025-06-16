@@ -226,7 +226,6 @@ fn event_diff_to_str(
         ]);
     }
 
-    table.printstd();
     Ok(table.to_string())
 }
 
