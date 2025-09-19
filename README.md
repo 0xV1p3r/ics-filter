@@ -19,31 +19,30 @@ The `config.toml` file is used to configure ICS Filter. Below is an example of t
 # Example config.toml
 
 [[calendars]]
-url = "https://example.com/my-calendar.ics" # URL to your ICS calendar file
-blacklist = ["Meeting with John", "Dentist Appointment"] # List of event summaries to filter out
+url = "https://example.com/my-calendar.ics" 
+blacklist = ["Meeting with John", "Dentist Appointment"]
 
 # Git Archiving Configuration (Optional - Comment out/remove if not used)
 [git.signature]
-username = "Your Git Username" # Username for Git commits
-email = "your.email@example.com" # Email for Git commits
+username = "Your Git Username"
+email = "your.email@example.com"
 
 [git.remote]
-domain = "github.com" # Domain of your Git repository (e.g., github.com, gitlab.com)
-repository = "your-repo" # Name of your Git repository 
-username = "your-git-username" # Username for accessing the Git repository
-token = "your-personal-access-token" # Personal Access Token for Git authentication
+domain = "github.com" 
+repository = "your-repo"
+username = "your-git-username"
+token = "your-personal-access-token"
 
 # Notification Configuration (Optional - Comment out/remove if not used)
-
 [notifications.email]
-smtp_server = "smtp.example.com:587" # SMTP server address and port
-username = "your-email@example.com" # Email account username
-password = "your-email-password" # Email account password
-recipients = ["recipient1@example.com", "recipient2@example.com"] # List of recipient email addresses
+smtp_server = "smtp.example.com:587"
+username = "your-email@example.com"
+password = "your-email-password"
+recipients = ["recipient1@example.com", "recipient2@example.com"]
 
 [notifications.gotify]
-server = "https://gotify.example.com" # Gotify server URL
-token = "your-gotify-app-token" # Gotify application token
+server = "https://gotify.example.com"
+token = "your-gotify-app-token"
 ```
 
 ## Deployment with Docker
