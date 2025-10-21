@@ -1,12 +1,12 @@
 use crate::{config::Config, git_repo::REPO_PATH};
 
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use std::fs::{copy, create_dir, read_dir, read_to_string, write};
 use std::path::Path;
 
 static CACHE_DIR: &str = "cache";
 
-pub fn copy_from_cache(filename: &String, destination: &str) -> Result<()> {
+pub fn copy_from_cache(filename: &str, destination: &str) -> Result<()> {
     let src_raw = format!("{CACHE_DIR}/{filename}");
     let src = Path::new(&src_raw);
     if !src.exists() {
@@ -19,7 +19,7 @@ pub fn copy_from_cache(filename: &String, destination: &str) -> Result<()> {
 
 pub fn initialize_cache(config: &Config) -> Result<()> {
     if !Path::new(CACHE_DIR).exists() {
-        create_dir(CACHE_DIR).with_context(|| "Failed to create cache directory!")?
+        create_dir(CACHE_DIR).with_context(|| "Failed to create cache directory!")?;
     }
     if config.git.is_some() {
         let dir_contents = read_dir(REPO_PATH).with_context(|| "Failed to read repo directory!")?;
@@ -42,11 +42,11 @@ pub fn initialize_cache(config: &Config) -> Result<()> {
     Ok(())
 }
 
-pub fn is_cached(filename: &String) -> bool {
+pub fn is_cached(filename: &str) -> bool {
     Path::new(&format!("{CACHE_DIR}/{filename}")).exists()
 }
 
-pub fn load_from_cache(filename: &String) -> Result<String> {
+pub fn load_from_cache(filename: &str) -> Result<String> {
     let path_as_str = format!("{CACHE_DIR}/{filename}");
     let path = Path::new(&path_as_str);
     if !path.exists() {
@@ -55,7 +55,7 @@ pub fn load_from_cache(filename: &String) -> Result<String> {
     read_to_string(path).with_context(|| format!("Failed to read file '{filename}'!"))
 }
 
-pub fn save_to_cache(contents: &String, filename: &String) -> Result<()> {
+pub fn save_to_cache(contents: &str, filename: &str) -> Result<()> {
     let path_as_str = format!("{CACHE_DIR}/{filename}");
     let path = Path::new(&path_as_str);
     write(path, contents).with_context(|| format!("Failed to write file '{filename}'!"))?;

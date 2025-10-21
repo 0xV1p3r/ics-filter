@@ -1,12 +1,12 @@
 use crate::cache::{copy_from_cache, initialize_cache};
 use crate::calendar::run_pipeline;
-use crate::config::{Config, load_config};
+use crate::config::{load_config, Config};
 use crate::git_repo::{initialize_repo, update_repo};
 use crate::notification::push_notifications;
 
 use anyhow::{Context, Result};
 use chrono::Local;
-use std::fs::{File, create_dir};
+use std::fs::{create_dir, File};
 use std::path::Path;
 
 mod cache;

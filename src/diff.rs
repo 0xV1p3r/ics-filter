@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use chrono::NaiveDateTime;
 use icalendar::{Calendar, CalendarComponent, Component, DatePerhapsTime, Event, EventLike};
-use prettytable::{Table, row};
+use prettytable::{row, Table};
 use regex::Regex;
 use similar::{ChangeTag, TextDiff};
 use std::cmp::PartialEq;
@@ -52,16 +52,6 @@ fn date_to_str(date: &DatePerhapsTime) -> Result<(String, String)> {
     Ok((date, time))
 }
 
-fn determine_change_type<T>(old: Option<T>, new: Option<T>) -> ChangeType {
-    if old.is_none() {
-        ChangeType::Insertion
-    } else if new.is_none() {
-        ChangeType::Deletion
-    } else {
-        ChangeType::Modification
-    }
-}
-
 fn diff_calendars(old: &Calendar, new: &Calendar) -> Result<CalendarDiff> {
     let (mut old_uids, old_events) = map_events(old)?;
     let (mut new_uids, new_events) = map_events(new)?;
@@ -82,10 +72,14 @@ fn diff_calendars(old: &Calendar, new: &Calendar) -> Result<CalendarDiff> {
         let old = old_events.get(uid);
         let new = new_events.get(uid);
 
-        if old.is_some() && new.is_none() {
-            calendar_diff.deletions.push(old.unwrap().clone());
-        } else if old.is_none() && new.is_some() {
-            calendar_diff.insertions.push(new.unwrap().clone());
+        if let Some(old) = old
+            && new.is_none()
+        {
+            calendar_diff.deletions.push(old.clone());
+        } else if let Some(new) = new
+            && old.is_none()
+        {
+            calendar_diff.insertions.push(new.clone());
         } else if !events_identical(old.unwrap(), new.unwrap()) {
             calendar_diff
                 .modifications
@@ -103,7 +97,13 @@ fn diff_events(old: &Event, new: &Event) -> Vec<(EventField, ChangeType)> {
     if old_description != new_description {
         result.push((
             EventField::Description,
-            determine_change_type(old_description, new_description),
+            if old_description.is_none() {
+                ChangeType::Insertion
+            } else if new_description.is_none() {
+                ChangeType::Deletion
+            } else {
+                ChangeType::Modification
+            },
         ));
     }
 
@@ -111,7 +111,13 @@ fn diff_events(old: &Event, new: &Event) -> Vec<(EventField, ChangeType)> {
     if old_date_end != new_date_end {
         result.push((
             EventField::DateEnd,
-            determine_change_type(old_date_end, new_date_end),
+            if old_date_end.is_none() {
+                ChangeType::Insertion
+            } else if new_date_end.is_none() {
+                ChangeType::Deletion
+            } else {
+                ChangeType::Modification
+            },
         ));
     }
 
@@ -119,7 +125,13 @@ fn diff_events(old: &Event, new: &Event) -> Vec<(EventField, ChangeType)> {
     if old_date_start != new_date_start {
         result.push((
             EventField::DateStart,
-            determine_change_type(old_date_start, new_date_start),
+            if old_date_start.is_none() {
+                ChangeType::Insertion
+            } else if new_date_start.is_none() {
+                ChangeType::Deletion
+            } else {
+                ChangeType::Modification
+            },
         ));
     }
 
@@ -127,7 +139,13 @@ fn diff_events(old: &Event, new: &Event) -> Vec<(EventField, ChangeType)> {
     if old_location != new_location {
         result.push((
             EventField::Location,
-            determine_change_type(old_location, new_location),
+            if old_location.is_none() {
+                ChangeType::Insertion
+            } else if new_location.is_none() {
+                ChangeType::Deletion
+            } else {
+                ChangeType::Modification
+            },
         ));
     }
 
@@ -135,7 +153,13 @@ fn diff_events(old: &Event, new: &Event) -> Vec<(EventField, ChangeType)> {
     if old_priority != new_priority {
         result.push((
             EventField::Priority,
-            determine_change_type(old_priority, new_priority),
+            if old_priority.is_none() {
+                ChangeType::Insertion
+            } else if new_priority.is_none() {
+                ChangeType::Deletion
+            } else {
+                ChangeType::Modification
+            },
         ));
     }
 
@@ -143,7 +167,13 @@ fn diff_events(old: &Event, new: &Event) -> Vec<(EventField, ChangeType)> {
     if old_summary != new_summary {
         result.push((
             EventField::Summary,
-            determine_change_type(old_summary, new_summary),
+            if old_summary.is_none() {
+                ChangeType::Insertion
+            } else if new_summary.is_none() {
+                ChangeType::Deletion
+            } else {
+                ChangeType::Modification
+            },
         ));
     }
 
@@ -258,7 +288,7 @@ fn events_identical(event1: &Event, event2: &Event) -> bool {
     description && date_end && date_start && location && priority && summary
 }
 
-fn event_to_str(event: Event) -> Result<String> {
+fn event_to_str(event: &Event) -> Result<String> {
     // TODO: For logging -> If a field is None emit a warning
     let summary = event.get_summary().unwrap_or("No Heading");
     let (date, start) = match event.get_start() {
@@ -295,10 +325,10 @@ pub fn generate_diff_report(old: &Calendar, new: &Calendar) -> Result<DiffReport
     let diff = diff_calendars(old, new)?;
 
     for deletion in diff.deletions {
-        report.deletions.push(event_to_str(deletion)?)
+        report.deletions.push(event_to_str(&deletion)?);
     }
     for insertion in diff.insertions {
-        report.insertions.push(event_to_str(insertion)?)
+        report.insertions.push(event_to_str(&insertion)?);
     }
     for modifications in diff.modifications {
         let event_diff = diff_events(&modifications.0, &modifications.1);
@@ -306,7 +336,7 @@ pub fn generate_diff_report(old: &Calendar, new: &Calendar) -> Result<DiffReport
             event_diff,
             &modifications.0,
             &modifications.1,
-        )?)
+        )?);
     }
 
     Ok(report)
@@ -325,7 +355,7 @@ fn map_events(calendar: &Calendar) -> Result<(Vec<&str>, HashMap<&str, Event>)> 
     Ok((event_uids, events))
 }
 
-pub fn raw_ics_identical(old: &String, new: &String) -> Result<bool> {
+pub fn raw_ics_identical(old: &str, new: &str) -> Result<bool> {
     let regex =
         Regex::new(TIMESTAMP_REGEX).with_context(|| "Failed to compile regular expression!")?;
     for diff in TextDiff::from_lines(old, new).iter_all_changes() {

@@ -3,8 +3,8 @@ use crate::diff::DiffReport;
 
 use anyhow::{Context, Result};
 use chrono::Local;
-use lettre::message::{Mailbox, Mailboxes, header::ContentType};
-use lettre::transport::smtp::{SmtpTransport, authentication::Credentials};
+use lettre::message::{header::ContentType, Mailbox, Mailboxes};
+use lettre::transport::smtp::{authentication::Credentials, SmtpTransport};
 use lettre::{Message, Transport};
 use reqwest::blocking::Client;
 use url::Url;
@@ -85,17 +85,17 @@ pub fn push_notifications(
         let title = format!("'{calendar_name}' -- Event deleted");
 
         for msg in report.deletions {
-            messages.push((title.clone(), msg))
+            messages.push((title.clone(), msg));
         }
 
         let title = format!("'{calendar_name}' -- Event added");
         for msg in report.insertions {
-            messages.push((title.clone(), msg))
+            messages.push((title.clone(), msg));
         }
 
         let title = format!("'{calendar_name}' -- Event modified");
         for msg in report.modifications {
-            messages.push((title.clone(), msg))
+            messages.push((title.clone(), msg));
         }
     }
 

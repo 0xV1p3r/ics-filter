@@ -2,7 +2,11 @@ use crate::cache::copy_from_cache;
 use crate::config::{GitConfig, GitRemoteConfig};
 use anyhow::{Context, Result};
 use git2::build::RepoBuilder;
-use git2::{AutotagOption, Cred, FetchOptions, IndexAddOption, PushOptions, RemoteCallbacks, Repository, Signature};
+use git2::{
+    AutotagOption, Cred, FetchOptions, IndexAddOption, PushOptions, RemoteCallbacks, Repository,
+    Signature,
+};
+use std::fmt::Write;
 use std::path::Path;
 use url::Url;
 
@@ -35,22 +39,24 @@ fn clone_repo(config: &GitRemoteConfig) -> Result<()> {
     let mut fetch_options = FetchOptions::new();
     let mut remote_callbacks = RemoteCallbacks::new();
     let mut repo_builder = RepoBuilder::new();
-    
-    remote_callbacks.credentials(|_, _, _| Cred::userpass_plaintext(&config.username, &config.token));
 
-    fetch_options.remote_callbacks(remote_callbacks)
+    remote_callbacks
+        .credentials(|_, _, _| Cred::userpass_plaintext(&config.username, &config.token));
+
+    fetch_options
+        .remote_callbacks(remote_callbacks)
         .download_tags(AutotagOption::All)
         .update_fetchhead(true);
-    
+
     repo_builder
         .fetch_options(fetch_options)
         .clone(url.as_ref(), Path::new(REPO_PATH))
         .with_context(|| "Failed to clone repository")?;
-    
+
     Ok(())
 }
 
-fn commit(message: &str, repo: &Repository, signature: Signature) -> Result<()> {
+fn commit(message: &str, repo: &Repository, signature: &Signature) -> Result<()> {
     let mut index = repo
         .index()
         .with_context(|| "Failed to acquire repo index!")?;
@@ -67,8 +73,8 @@ fn commit(message: &str, repo: &Repository, signature: Signature) -> Result<()> 
         .with_context(|| "Failed to lookup reference")?;
     repo.commit(
         Some("HEAD"),
-        &signature,
-        &signature,
+        signature,
+        signature,
         message,
         &tree,
         &[&parent_commit],
@@ -78,16 +84,17 @@ fn commit(message: &str, repo: &Repository, signature: Signature) -> Result<()> 
     Ok(())
 }
 
-fn create_commit_message(calendar_names: &Vec<String>) -> String {
+fn create_commit_message(calendar_names: &Vec<String>) -> Result<String> {
     let mut modded_files = String::new();
     for name in calendar_names {
-        modded_files.push_str(&format!("{name},"));
+        write!(&mut modded_files, "{name},")?;
     }
     modded_files.pop();
-    format!("AUTOMATED COMMIT -- Updated {modded_files}")
+
+    Ok(format!("AUTOMATED COMMIT -- Updated {modded_files}"))
 }
 
-fn create_initial_commit(repo: &Repository, signature: Signature) -> Result<()> {
+fn create_initial_commit(repo: &Repository, signature: &Signature) -> Result<()> {
     let oid = repo
         .index()
         .with_context(|| "Failed to acquire repo index")?
@@ -98,8 +105,8 @@ fn create_initial_commit(repo: &Repository, signature: Signature) -> Result<()> 
         .with_context(|| "Failed to write index as tree")?;
     repo.commit(
         Some("HEAD"),
-        &signature,
-        &signature,
+        signature,
+        signature,
         "Initial commit",
         &tree,
         &[],
@@ -173,10 +180,11 @@ pub fn update_repo(calendar_names: &Vec<String>, config: GitConfig) -> Result<()
         .with_context(|| "Failed to create signature")?;
 
     if check_if_no_commits_exist(&repository) {
-        create_initial_commit(&repository, signature).with_context(|| "Failed to commit")?;
+        create_initial_commit(&repository, &signature).with_context(|| "Failed to commit")?;
     } else {
-        let msg = create_commit_message(calendar_names);
-        commit(&msg, &repository, signature).with_context(|| "Failed to commit")?;
+        let msg = create_commit_message(calendar_names)
+            .with_context(|| "Failed to create commit message")?;
+        commit(&msg, &repository, &signature).with_context(|| "Failed to commit")?;
     }
 
     if config.remote.is_some() {

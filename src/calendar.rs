@@ -1,9 +1,9 @@
 use crate::cache::{is_cached, load_from_cache, save_to_cache};
 use crate::calendar::PipelineResult::{New, Nothing, Updated};
 use crate::config::{CalendarConfig, Config};
-use crate::diff::{DiffReport, generate_diff_report, raw_ics_identical};
+use crate::diff::{generate_diff_report, raw_ics_identical, DiffReport};
 
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use icalendar::{Calendar, CalendarComponent, Component};
 use reqwest::blocking::get;
 use url::Url;
@@ -144,7 +144,7 @@ pub fn run_pipeline(config: &Config) -> Result<(Vec<String>, Vec<DiffReport>)> {
             Nothing => (),
             Updated(result) => {
                 reports.push(result.1);
-                updated_names.push(result.0)
+                updated_names.push(result.0);
             }
         }
     }
