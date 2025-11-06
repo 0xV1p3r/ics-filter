@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use chrono::NaiveDateTime;
 use icalendar::{Calendar, CalendarComponent, Component, DatePerhapsTime, Event, EventLike};
-use prettytable::{row, Table};
+use prettytable::{Table, row};
 use regex::Regex;
 use similar::{ChangeTag, TextDiff};
 use std::cmp::PartialEq;

@@ -3,8 +3,8 @@ use crate::diff::DiffReport;
 
 use anyhow::{Context, Result};
 use chrono::Local;
-use lettre::message::{header::ContentType, Mailbox, Mailboxes};
-use lettre::transport::smtp::{authentication::Credentials, SmtpTransport};
+use lettre::message::{Mailbox, Mailboxes, header::ContentType};
+use lettre::transport::smtp::{SmtpTransport, authentication::Credentials};
 use lettre::{Message, Transport};
 use reqwest::blocking::Client;
 use url::Url;

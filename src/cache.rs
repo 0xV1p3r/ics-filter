@@ -1,6 +1,6 @@
 use crate::{config::Config, git_repo::REPO_PATH};
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use std::fs::{copy, create_dir, read_dir, read_to_string, write};
 use std::path::Path;
 
