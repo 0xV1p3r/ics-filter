@@ -135,8 +135,9 @@ fn pipeline_for_calendar(calendar_config: &CalendarConfig) -> Result<PipelineRes
 }
 
 pub fn run_pipeline(config: &Config) -> Result<(Vec<String>, Vec<DiffReport>)> {
-    let mut reports = Vec::new();
-    let mut updated_names = Vec::new();
+    let calendar_count = config.calendars.len();
+    let mut reports = Vec::with_capacity(calendar_count);
+    let mut updated_names = Vec::with_capacity(calendar_count);
 
     for calendar in &config.calendars {
         match pipeline_for_calendar(calendar)? {

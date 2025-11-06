@@ -80,7 +80,8 @@ pub fn push_notifications(
 
     let notification_config = config.notifications.clone().unwrap();
 
-    let mut messages = Vec::new();
+    let mut messages = Vec::with_capacity(reports.len());
+
     for (calendar_name, report) in names.iter().zip(reports) {
         let title = format!("'{calendar_name}' -- Event deleted");
 

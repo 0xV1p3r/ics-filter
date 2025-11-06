@@ -55,17 +55,9 @@ fn date_to_str(date: &DatePerhapsTime) -> Result<(String, String)> {
 fn diff_calendars(old: &Calendar, new: &Calendar) -> Result<CalendarDiff> {
     let (mut old_uids, old_events) = map_events(old)?;
     let (mut new_uids, new_events) = map_events(new)?;
-    old_uids.append(&mut new_uids); // Merge old & new uids with duplicates
+    old_uids.append(&mut new_uids);
 
-    // Make a vector of uids containing no duplicates
-    let mut uids = Vec::new();
-    let mut seen_uids = HashSet::new();
-    for uid in old_uids {
-        if !seen_uids.contains(uid) {
-            seen_uids.insert(uid);
-            uids.push(uid);
-        }
-    }
+    let uids: HashSet<&str> = old_uids.into_iter().collect();
 
     let mut calendar_diff = CalendarDiff::default();
     for uid in uids {
@@ -345,6 +337,7 @@ pub fn generate_diff_report(old: &Calendar, new: &Calendar) -> Result<DiffReport
 fn map_events(calendar: &Calendar) -> Result<(Vec<&str>, HashMap<&str, Event>)> {
     let mut event_uids = Vec::new();
     let mut events = HashMap::new();
+
     for component in &calendar.components {
         if let CalendarComponent::Event(event) = component {
             let uid = event.get_uid().context("Failed to get event uid!")?;
@@ -352,6 +345,7 @@ fn map_events(calendar: &Calendar) -> Result<(Vec<&str>, HashMap<&str, Event>)> 
             events.insert(uid, event.clone());
         }
     }
+
     Ok((event_uids, events))
 }
 
