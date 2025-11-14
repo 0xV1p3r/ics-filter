@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.0
+ - Added whitelist 
+ - Performance improvement
+---
 ## 1.1.0
  - Added email based notifications
  - Updated textual representation of events -> Now using tables
