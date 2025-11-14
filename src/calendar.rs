@@ -6,10 +6,16 @@ use crate::diff::{DiffReport, generate_diff_report, raw_ics_identical};
 use anyhow::{Context, Result, bail};
 use icalendar::{Calendar, CalendarComponent, Component};
 use reqwest::blocking::get;
+use std::collections::HashSet;
 use url::Url;
 
+enum AllowList {
+    BlackList(HashSet<String>),
+    WhiteList(HashSet<String>),
+}
+
 struct AppCalendar {
-    blacklist: Vec<String>,
+    list: AllowList,
     name: String,
     url: Url,
 }
@@ -35,15 +41,21 @@ fn build_filtered_calendar(calendar: &AppCalendar) -> Result<()> {
 
     let mut filtered_calendar = Calendar::new();
 
-    'outer: for component in &parsed_calendar.components {
+    for component in &parsed_calendar.components {
         if let CalendarComponent::Event(event) = component {
             let summary = event.get_summary().unwrap();
-            for entry in &calendar.blacklist {
-                if summary == entry {
-                    continue 'outer;
+            match &calendar.list {
+                AllowList::BlackList(black_list) => {
+                    if !black_list.contains(summary) {
+                        filtered_calendar.push(event.clone());
+                    }
+                }
+                AllowList::WhiteList(white_list) => {
+                    if white_list.contains(summary) {
+                        filtered_calendar.push(event.clone());
+                    }
                 }
             }
-            filtered_calendar.push(event.clone());
         }
     }
 
@@ -62,11 +74,26 @@ fn calendar_from_config(calendar_config: &CalendarConfig) -> Result<AppCalendar>
     } else {
         calendar_config.name.clone().unwrap()
     };
-    Ok(AppCalendar {
-        blacklist: calendar_config.blacklist.clone(),
-        name,
-        url: calendar_config.url.clone(),
-    })
+
+    if let Some(list_content) = calendar_config.whitelist.clone() {
+        let list_content: HashSet<String> = list_content.into_iter().collect();
+        Ok(AppCalendar {
+            list: AllowList::WhiteList(list_content),
+            name,
+            url: calendar_config.url.clone(),
+        })
+    } else if let Some(list_content) = calendar_config.blacklist.clone() {
+        let list_content: HashSet<String> = list_content.into_iter().collect();
+        Ok(AppCalendar {
+            list: AllowList::BlackList(list_content),
+            name,
+            url: calendar_config.url.clone(),
+        })
+    } else if calendar_config.blacklist.is_some() && calendar_config.whitelist.is_some() {
+        bail!("Calendar '{name}' has both black- and whitelist! Only one allowed.")
+    } else {
+        bail!("Calendar '{name}' is missing a black- or whitelist!")
+    }
 }
 
 fn fetch_calendar(url: &Url) -> Result<String> {

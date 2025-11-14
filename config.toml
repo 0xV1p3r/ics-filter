@@ -2,6 +2,10 @@
 url = ""
 blacklist = []
 
+[[calendars]]
+url = ""
+whitelist = []
+
 [git.signature]
 username = ""
 email = ""

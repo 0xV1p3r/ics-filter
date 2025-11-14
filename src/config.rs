@@ -14,9 +14,10 @@ pub struct Config {
 
 #[derive(Clone, Deserialize)]
 pub struct CalendarConfig {
-    pub blacklist: Vec<String>,
+    pub blacklist: Option<Vec<String>>,
     pub name: Option<String>,
     pub url: Url,
+    pub whitelist: Option<Vec<String>>,
 }
 
 #[derive(Clone, Deserialize)]
