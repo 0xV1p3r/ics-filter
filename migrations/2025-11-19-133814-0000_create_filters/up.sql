@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS filters (
+    id INTEGER NOT NULL PRIMARY KEY,
+    filter_type TEXT NOT NULL,
+    name TEXT NOT NULL
+);
