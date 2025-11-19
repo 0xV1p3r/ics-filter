@@ -9,8 +9,7 @@ use crate::models::{
 
 #[make_public]
 #[derive(Queryable, Selectable)]
-#[diesel(table_name = crate::schema::calendars)]
-#[diesel(check_for_backend(diesel::sqlite::Sqlite))]
+#[diesel(table_name = crate::schema::calendars, check_for_backend(diesel::sqlite::Sqlite))]
 struct Calendar {
     id: i32,
     name: String,
@@ -20,9 +19,11 @@ struct Calendar {
 
 #[make_public]
 #[derive(Queryable, Selectable, Identifiable, Associations)]
-#[diesel(belongs_to(Calendar))]
-#[diesel(table_name = crate::schema::events)]
-#[diesel(check_for_backend(diesel::sqlite::Sqlite))]
+#[diesel(
+    belongs_to(Calendar),
+    table_name = crate::schema::events,
+    check_for_backend(diesel::sqlite::Sqlite)
+)]
 struct Event {
     id: i32,
     calendar_id: i32,
@@ -37,10 +38,12 @@ struct Event {
 
 #[make_public]
 #[derive(Queryable, Selectable, Identifiable, Associations)]
-#[diesel(belongs_to(Calendar))]
-#[diesel(belongs_to(Event))]
-#[diesel(table_name = crate::schema::event_snapshots)]
-#[diesel(check_for_backend(diesel::sqlite::Sqlite))]
+#[diesel(
+    belongs_to(Calendar),
+    belongs_to(Event),
+    table_name = crate::schema::event_snapshots,
+    check_for_backend(diesel::sqlite::Sqlite)
+)]
 struct EventSnapshot {
     id: i32,
     calendar_id: i32,
@@ -56,8 +59,7 @@ struct EventSnapshot {
 
 #[make_public]
 #[derive(Queryable, Selectable)]
-#[diesel(table_name = crate::schema::filters)]
-#[diesel(check_for_backend(diesel::sqlite::Sqlite))]
+#[diesel(table_name = crate::schema::filters, check_for_backend(diesel::sqlite::Sqlite))]
 struct Filter {
     id: i32,
     filter_type: FilterType,
@@ -66,8 +68,7 @@ struct Filter {
 
 #[make_public]
 #[derive(Queryable, Selectable)]
-#[diesel(table_name = crate::schema::filter_criteria)]
-#[diesel(check_for_backend(diesel::sqlite::Sqlite))]
+#[diesel(table_name = crate::schema::filter_criteria, check_for_backend(diesel::sqlite::Sqlite))]
 struct FilterCriteria {
     id: i32,
     criteria_type: FilterCriteriaType,
@@ -76,11 +77,13 @@ struct FilterCriteria {
 
 #[make_public]
 #[derive(Queryable, Selectable, Identifiable, Associations)]
-#[diesel(belongs_to(Filter))]
-#[diesel(belongs_to(FilterCriteria))]
-#[diesel(primary_key(filter_id, filter_criteria_id))]
-#[diesel(table_name = crate::schema::filter_criteria_filters)]
-#[diesel(check_for_backend(diesel::sqlite::Sqlite))]
+#[diesel(
+    belongs_to(Filter),
+    belongs_to(FilterCriteria),
+    primary_key(filter_id, filter_criteria_id),
+    table_name = crate::schema::filter_criteria_filters,
+    check_for_backend(diesel::sqlite::Sqlite)
+)]
 struct FilterCriteriaFilters {
     filter_id: i32,
     filter_criteria_id: i32,
@@ -88,11 +91,13 @@ struct FilterCriteriaFilters {
 
 #[make_public]
 #[derive(Queryable, Selectable, Identifiable, Associations)]
-#[diesel(belongs_to(Calendar))]
-#[diesel(belongs_to(Filter))]
-#[diesel(primary_key(filter_id, calendar_id))]
-#[diesel(table_name = crate::schema::filtered_calendars)]
-#[diesel(check_for_backend(diesel::sqlite::Sqlite))]
+#[diesel(
+    belongs_to(Calendar),
+    belongs_to(Filter),
+    primary_key(filter_id, calendar_id),
+    table_name = crate::schema::filtered_calendars,
+    check_for_backend(diesel::sqlite::Sqlite)
+)]
 struct FilteredCalendar {
     calendar_id: i32,
     filter_id: i32,
