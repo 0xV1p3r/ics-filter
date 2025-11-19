@@ -25,7 +25,7 @@ pub enum Color {
 }
 
 impl Color {
-    pub fn to_rgb(self) -> (u8, u8, u8) {
+    pub fn to_rgb(&self) -> (u8, u8, u8) {
         match self {
             Color::Black => (0, 0, 0),
             Color::White => (255, 255, 255),
@@ -43,7 +43,7 @@ impl Color {
         }
     }
 
-    pub fn to_hex(self) -> &'static str {
+    pub fn to_hex(&self) -> &'static str {
         match self {
             Color::Black => "#000000",
             Color::White => "#FFFFFF",
