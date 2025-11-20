@@ -22,6 +22,7 @@ struct Calendar {
 #[diesel(
     belongs_to(Calendar),
     table_name = crate::schema::events,
+    treat_none_as_default_value = false,
     check_for_backend(diesel::sqlite::Sqlite)
 )]
 struct Event {
@@ -42,6 +43,7 @@ struct Event {
     belongs_to(Calendar),
     belongs_to(Event),
     table_name = crate::schema::event_snapshots,
+    treat_none_as_default_value = false,
     check_for_backend(diesel::sqlite::Sqlite)
 )]
 struct EventSnapshot {
