@@ -1,11 +1,10 @@
 use diesel::{
-    Queryable,
     deserialize::FromSql,
-    serialize::{Output, ToSql},
+    pg::{Pg, PgValue},
+    serialize::{IsNull, Output, ToSql},
     sql_types::Text,
-    sqlite::{Sqlite, SqliteValue},
 };
-use std::fmt;
+use std::io::Write;
 
 #[derive(Debug)]
 pub enum Color {
@@ -62,68 +61,58 @@ impl Color {
     }
 }
 
-impl fmt::Display for Color {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let name = match self {
-            Color::Black => "Black",
-            Color::White => "White",
-            Color::Red => "Red",
-            Color::Green => "Green",
-            Color::Blue => "Blue",
-            Color::Yellow => "Yellow",
-            Color::Cyan => "Cyan",
-            Color::Magenta => "Magenta",
-            Color::Gray => "Gray",
-            Color::Orange => "Orange",
-            Color::Purple => "Purple",
-            Color::Brown => "Brown",
-            Color::Pink => "Pink",
-        };
-        write!(f, "{name}")
-    }
-}
-
-impl TryFrom<&str> for Color {
-    type Error = String;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        match value.trim().to_ascii_lowercase().as_str() {
-            "black" => Ok(Color::Black),
-            "white" => Ok(Color::White),
-            "red" => Ok(Color::Red),
-            "green" => Ok(Color::Green),
-            "blue" => Ok(Color::Blue),
-            "yellow" => Ok(Color::Yellow),
-            "cyan" => Ok(Color::Cyan),
-            "magenta" => Ok(Color::Magenta),
-            "gray" | "grey" => Ok(Color::Gray),
-            "orange" => Ok(Color::Orange),
-            "purple" => Ok(Color::Purple),
-            "brown" => Ok(Color::Brown),
-            "pink" => Ok(Color::Pink),
-            _ => Err(format!("Unknown color: {value}")),
+impl Into<&[u8]> for &Color {
+    fn into(self) -> &'static [u8] {
+        match self {
+            Color::Black => b"black",
+            Color::White => b"white",
+            Color::Red => b"red",
+            Color::Green => b"green",
+            Color::Blue => b"blue",
+            Color::Yellow => b"yellow",
+            Color::Cyan => b"cyan",
+            Color::Magenta => b"magenta",
+            Color::Gray => b"gray",
+            Color::Orange => b"orange",
+            Color::Purple => b"purple",
+            Color::Brown => b"brown",
+            Color::Pink => b"pink",
         }
     }
 }
 
-impl FromSql<Text, Sqlite> for Color {
-    fn from_sql(bytes: SqliteValue) -> diesel::deserialize::Result<Self> {
-        let t = <String as FromSql<Text, Sqlite>>::from_sql(bytes)?;
-        Ok(t.as_str().try_into()?)
+impl TryFrom<&[u8]> for Color {
+    type Error = &'static str;
+
+    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+        match value {
+            b"black" => Ok(Color::Black),
+            b"white" => Ok(Color::White),
+            b"red" => Ok(Color::Red),
+            b"green" => Ok(Color::Green),
+            b"blue" => Ok(Color::Blue),
+            b"yellow" => Ok(Color::Yellow),
+            b"cyan" => Ok(Color::Cyan),
+            b"magenta" => Ok(Color::Magenta),
+            b"gray" | b"grey" => Ok(Color::Gray),
+            b"orange" => Ok(Color::Orange),
+            b"purple" => Ok(Color::Purple),
+            b"brown" => Ok(Color::Brown),
+            b"pink" => Ok(Color::Pink),
+            _ => Err("Unknown enum variant"),
+        }
     }
 }
 
-impl ToSql<Text, Sqlite> for Color {
-    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Sqlite>) -> diesel::serialize::Result {
-        out.set_value(self.to_string());
-        Ok(diesel::serialize::IsNull::No)
+impl FromSql<Text, Pg> for Color {
+    fn from_sql(bytes: PgValue) -> diesel::deserialize::Result<Self> {
+        Ok(bytes.as_bytes().try_into()?)
     }
 }
 
-impl Queryable<Text, Sqlite> for Color {
-    type Row = String;
-
-    fn build(row: Self::Row) -> diesel::deserialize::Result<Self> {
-        Ok(row.as_str().try_into()?)
+impl ToSql<Text, Pg> for Color {
+    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Pg>) -> diesel::serialize::Result {
+        out.write_all(self.into())?;
+        Ok(IsNull::No)
     }
 }

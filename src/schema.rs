@@ -1,75 +1,84 @@
 // @generated automatically by Diesel CLI.
 
+pub mod sql_types {
+    #[derive(diesel::query_builder::QueryId, Clone, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "filter_type_enum"))]
+    pub struct FilterTypeEnum;
+}
+
 diesel::table! {
     calendars (id) {
-        id -> Integer,
+        id -> Int4,
         name -> Text,
         url -> Text,
         color -> Text,
-        created_at -> TimestamptzSqlite,
-        updated_at -> TimestamptzSqlite,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
     }
 }
 
 diesel::table! {
     event_snapshots (id) {
-        id -> Integer,
-        event_id -> Integer,
-        calendar_id -> Integer,
+        id -> Int4,
+        event_id -> Int4,
+        calendar_id -> Int4,
         uid -> Text,
         summary -> Text,
         location -> Text,
         description -> Nullable<Text>,
-        start_date -> TimestamptzSqlite,
-        end_date -> TimestamptzSqlite,
-        timestamp -> TimestamptzSqlite,
+        start_date -> Timestamp,
+        end_date -> Timestamp,
+        timestamp -> Timestamp,
     }
 }
 
 diesel::table! {
     events (id) {
-        id -> Integer,
-        calendar_id -> Integer,
+        id -> Int4,
+        calendar_id -> Int4,
         uid -> Text,
         summary -> Text,
         location -> Text,
         description -> Nullable<Text>,
-        start_date -> TimestamptzSqlite,
-        end_date -> TimestamptzSqlite,
-        created_at -> TimestamptzSqlite,
+        start_date -> Timestamp,
+        end_date -> Timestamp,
+        created_at -> Timestamp,
     }
 }
 
 diesel::table! {
     filter_criteria (id) {
-        id -> Integer,
-        filter_id -> Integer,
+        id -> Int4,
+        filter_id -> Int4,
         criteria_type -> Text,
         value -> Text,
-        created_at -> TimestamptzSqlite,
-        updated_at -> TimestamptzSqlite,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
     }
 }
 
 diesel::table! {
     filtered_calendars (id) {
-        id -> Integer,
-        filter_id -> Integer,
-        calendar_id -> Integer,
+        id -> Int4,
+        filter_id -> Int4,
+        calendar_id -> Int4,
         name -> Text,
         color -> Text,
-        created_at -> TimestamptzSqlite,
-        updated_at -> TimestamptzSqlite,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
     }
 }
 
 diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::FilterTypeEnum;
+
     filters (id) {
-        id -> Integer,
-        filter_type -> Text,
+        id -> Int4,
+        filter_type -> FilterTypeEnum,
         name -> Text,
-        created_at -> TimestamptzSqlite,
-        updated_at -> TimestamptzSqlite,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
     }
 }
 

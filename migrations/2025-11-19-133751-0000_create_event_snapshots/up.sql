@@ -1,5 +1,5 @@
 CREATE TABLE event_snapshots (
-    id INTEGER NOT NULL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     event_id INTEGER NOT NULL,
     calendar_id INTEGER NOT NULL,
 

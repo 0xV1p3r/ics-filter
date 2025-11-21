@@ -7,8 +7,7 @@ use super::super::calendar::Calendar;
 #[diesel(
     belongs_to(Calendar),
     table_name = crate::schema::events,
-    treat_none_as_default_value = false,
-    check_for_backend(diesel::sqlite::Sqlite)
+    treat_none_as_default_value = false
 )]
 pub struct Event {
     pub id: i32,

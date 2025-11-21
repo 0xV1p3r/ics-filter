@@ -7,8 +7,7 @@ use super::{super::filter::Filter, Calendar, Color};
 #[diesel(
     belongs_to(Calendar),
     belongs_to(Filter),
-    table_name = crate::schema::filtered_calendars,
-    check_for_backend(diesel::sqlite::Sqlite)
+    table_name = crate::schema::filtered_calendars
 )]
 pub struct FilteredCalendar {
     pub id: i32,

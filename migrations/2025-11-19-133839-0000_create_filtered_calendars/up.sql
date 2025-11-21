@@ -1,5 +1,5 @@
 CREATE TABLE filtered_calendars (
-    id INTEGER NOT NULL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     filter_id INTEGER NOT NULL,
     calendar_id INTEGER NOT NULL,
 

@@ -4,7 +4,7 @@ use diesel::prelude::*;
 use super::Color;
 
 #[derive(Queryable, Selectable)]
-#[diesel(table_name = crate::schema::calendars, check_for_backend(diesel::sqlite::Sqlite))]
+#[diesel(table_name = crate::schema::calendars)]
 pub struct Calendar {
     pub id: i32,
     pub name: String,

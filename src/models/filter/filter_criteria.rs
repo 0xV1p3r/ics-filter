@@ -1,15 +1,16 @@
 use chrono::{DateTime, Utc};
 use diesel::{
-    deserialize::FromSql,
+    deserialize::{FromSql, FromSqlRow},
+    expression::AsExpression,
+    pg::{Pg, PgValue},
     prelude::*,
-    serialize::{Output, ToSql},
-    sql_types::Text,
-    sqlite::{Sqlite, SqliteValue},
+    serialize::{IsNull, Output, ToSql},
+    sql_types::SqlType,
 };
-use std::fmt;
+use std::io::Write;
 
 #[derive(Queryable, Selectable)]
-#[diesel(table_name = crate::schema::filter_criteria, check_for_backend(Sqlite))]
+#[diesel(table_name = crate::schema::filter_criteria)]
 pub struct FilterCriteria {
     pub id: i32,
     pub criteria_type: FilterCriteriaType,
@@ -18,55 +19,50 @@ pub struct FilterCriteria {
     updated_at: DateTime<Utc>,
 }
 
-#[derive(Debug)]
+#[derive(SqlType)]
+#[diesel(postgres_type(name = "filter_criteria_enum"))]
+struct FilterCriteriaSqlType;
+
+#[derive(Debug, FromSqlRow, AsExpression)]
+#[diesel(sql_type = FilterCriteriaSqlType)]
 pub enum FilterCriteriaType {
     Summary,
     Location,
     Description,
 }
 
-impl fmt::Display for FilterCriteriaType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let name = match self {
-            FilterCriteriaType::Description => "description",
-            FilterCriteriaType::Location => "location",
-            FilterCriteriaType::Summary => "summary",
-        };
-        write!(f, "{name}")
-    }
-}
-
-impl FromSql<Text, Sqlite> for FilterCriteriaType {
-    fn from_sql(bytes: SqliteValue) -> diesel::deserialize::Result<Self> {
-        let t = <String as FromSql<Text, Sqlite>>::from_sql(bytes)?;
-        Ok(t.as_str().try_into()?)
-    }
-}
-
-impl ToSql<Text, Sqlite> for FilterCriteriaType {
-    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Sqlite>) -> diesel::serialize::Result {
-        out.set_value(self.to_string());
-        Ok(diesel::serialize::IsNull::No)
-    }
-}
-
-impl TryFrom<&str> for FilterCriteriaType {
-    type Error = String;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        match value {
-            "description" => Ok(FilterCriteriaType::Description),
-            "location" => Ok(FilterCriteriaType::Location),
-            "summary" => Ok(FilterCriteriaType::Summary),
-            _ => Err(format!("Unknown filter criteria: {value}")),
+impl Into<&[u8]> for &FilterCriteriaType {
+    fn into(self) -> &'static [u8] {
+        match self {
+            FilterCriteriaType::Description => b"description",
+            FilterCriteriaType::Location => b"location",
+            FilterCriteriaType::Summary => b"summary",
         }
     }
 }
 
-impl Queryable<Text, Sqlite> for FilterCriteriaType {
-    type Row = String;
+impl TryFrom<&[u8]> for FilterCriteriaType {
+    type Error = &'static str;
 
-    fn build(row: Self::Row) -> diesel::deserialize::Result<Self> {
-        Ok(row.as_str().try_into()?)
+    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+        match value {
+            b"description" => Ok(FilterCriteriaType::Description),
+            b"location" => Ok(FilterCriteriaType::Location),
+            b"summary" => Ok(FilterCriteriaType::Summary),
+            _ => Err("Unknown enum variant"),
+        }
+    }
+}
+
+impl FromSql<FilterCriteriaSqlType, Pg> for FilterCriteriaType {
+    fn from_sql(bytes: PgValue) -> diesel::deserialize::Result<Self> {
+        Ok(bytes.as_bytes().try_into()?)
+    }
+}
+
+impl ToSql<FilterCriteriaSqlType, Pg> for FilterCriteriaType {
+    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Pg>) -> diesel::serialize::Result {
+        out.write_all(self.into())?;
+        Ok(IsNull::No)
     }
 }

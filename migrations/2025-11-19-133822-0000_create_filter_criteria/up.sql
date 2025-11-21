@@ -1,5 +1,6 @@
+CREATE TYPE criteria_type_enum AS ENUM ('description', 'location', 'summary');
 CREATE TABLE filter_criteria (
-    id INTEGER NOT NULL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     filter_id INTEGER NOT NULL,
 
     criteria_type TEXT NOT NULL,

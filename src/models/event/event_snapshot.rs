@@ -8,8 +8,7 @@ use super::{super::calendar::Calendar, Event};
     belongs_to(Calendar),
     belongs_to(Event),
     table_name = crate::schema::event_snapshots,
-    treat_none_as_default_value = false,
-    check_for_backend(diesel::sqlite::Sqlite)
+    treat_none_as_default_value = false
 )]
 pub struct EventSnapshot {
     pub id: i32,
