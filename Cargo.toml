@@ -9,4 +9,3 @@ chrono = "0.4.42"
 diesel = { version = "2.3.3", features = ["sqlite", "returning_clauses_for_sqlite_3_35", "chrono"] }
 dotenvy = "0.15.7"
 icalendar = { version = "0.17.5", features = ["parser"] }
-make_public = "0.1.0"

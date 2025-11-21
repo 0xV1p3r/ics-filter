@@ -1,3 +1,3 @@
-pub mod color;
-pub mod database;
+pub mod calendar;
+pub mod event;
 pub mod filter;

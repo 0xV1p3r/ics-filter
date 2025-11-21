@@ -7,9 +7,10 @@ CREATE TABLE IF NOT EXISTS events (
     location TEXT NOT NULL,
     description TEXT,
 
-    timezone TEXT NOT NULL,
-    start_date DATETIME NOT NULL,
-    end_date DATETIME NOT NULL,
+    start_date TIMESTAMP NOT NULL,
+    end_date TIMESTAMP NOT NULL,
 
-    FOREIGN KEY (calendar_id) REFERENCES calendars(id) ON DELETE CASCADE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (calendar_id) REFERENCES calendars(id) ON DELETE CASCADE
 );

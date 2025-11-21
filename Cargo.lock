@@ -252,7 +252,6 @@ dependencies = [
  "diesel",
  "dotenvy",
  "icalendar",
- "make_public",
 ]
 
 [[package]]
@@ -307,17 +306,6 @@ name = "log"
 version = "0.4.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "34080505efa8e45a4b816c349525ebe327ceaa8559756f0356cba97ef3bf7432"
-
-[[package]]
-name = "make_public"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "06f24b294dfb1d87d56ddacaea9ec48287ae6ec246ede9f250ba09082d0b793e"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
 
 [[package]]
 name = "memchr"

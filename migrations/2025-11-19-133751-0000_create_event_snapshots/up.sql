@@ -7,12 +7,10 @@ CREATE TABLE event_snapshots (
     summary TEXT NOT NULL,
     location TEXT NOT NULL,
     description TEXT,
-    timezone TEXT NOT NULL,
-    start_date DATETIME NOT NULL,
-    end_date DATETIME NOT NULL,
+    start_date TIMESTAMP NOT NULL,
+    end_date TIMESTAMP NOT NULL,
 
-    created_at DATETIME NOT NULL,
-    timestamp DATETIME NOT NULL,
+    timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
     FOREIGN KEY (calendar_id) REFERENCES calendars(id) ON DELETE CASCADE

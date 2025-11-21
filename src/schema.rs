@@ -6,6 +6,8 @@ diesel::table! {
         name -> Text,
         url -> Text,
         color -> Text,
+        created_at -> TimestamptzSqlite,
+        updated_at -> TimestamptzSqlite,
     }
 }
 
@@ -14,14 +16,13 @@ diesel::table! {
         id -> Integer,
         event_id -> Integer,
         calendar_id -> Integer,
-        timestamp -> Timestamp,
         uid -> Text,
         summary -> Text,
         location -> Text,
         description -> Nullable<Text>,
-        timezone -> Text,
-        start_date -> Timestamp,
-        end_date -> Timestamp,
+        start_date -> TimestamptzSqlite,
+        end_date -> TimestamptzSqlite,
+        timestamp -> TimestamptzSqlite,
     }
 }
 
@@ -33,33 +34,32 @@ diesel::table! {
         summary -> Text,
         location -> Text,
         description -> Nullable<Text>,
-        timezone -> Text,
-        start_date -> Timestamp,
-        end_date -> Timestamp,
+        start_date -> TimestamptzSqlite,
+        end_date -> TimestamptzSqlite,
+        created_at -> TimestamptzSqlite,
     }
 }
 
 diesel::table! {
     filter_criteria (id) {
         id -> Integer,
+        filter_id -> Integer,
         criteria_type -> Text,
         value -> Text,
+        created_at -> TimestamptzSqlite,
+        updated_at -> TimestamptzSqlite,
     }
 }
 
 diesel::table! {
-    filter_criteria_filters (filter_id, filter_criteria_id) {
-        filter_id -> Integer,
-        filter_criteria_id -> Integer,
-    }
-}
-
-diesel::table! {
-    filtered_calendars (filter_id, calendar_id) {
+    filtered_calendars (id) {
+        id -> Integer,
         filter_id -> Integer,
         calendar_id -> Integer,
         name -> Text,
         color -> Text,
+        created_at -> TimestamptzSqlite,
+        updated_at -> TimestamptzSqlite,
     }
 }
 
@@ -68,14 +68,15 @@ diesel::table! {
         id -> Integer,
         filter_type -> Text,
         name -> Text,
+        created_at -> TimestamptzSqlite,
+        updated_at -> TimestamptzSqlite,
     }
 }
 
 diesel::joinable!(event_snapshots -> calendars (calendar_id));
 diesel::joinable!(event_snapshots -> events (event_id));
 diesel::joinable!(events -> calendars (calendar_id));
-diesel::joinable!(filter_criteria_filters -> filter_criteria (filter_criteria_id));
-diesel::joinable!(filter_criteria_filters -> filters (filter_id));
+diesel::joinable!(filter_criteria -> filters (filter_id));
 diesel::joinable!(filtered_calendars -> calendars (calendar_id));
 diesel::joinable!(filtered_calendars -> filters (filter_id));
 
@@ -84,7 +85,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     event_snapshots,
     events,
     filter_criteria,
-    filter_criteria_filters,
     filtered_calendars,
     filters,
 );

@@ -1,8 +1,12 @@
 CREATE TABLE filter_criteria (
     id INTEGER NOT NULL PRIMARY KEY,
+    filter_id INTEGER NOT NULL,
+
     criteria_type TEXT NOT NULL,
     value TEXT NOT NULL,
 
-    created_at DATETIME NOT NULL,
-    updated_at DATETIME NOT NULL
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (filter_id) REFERENCES filters(id) ON DELETE CASCADE
 );
