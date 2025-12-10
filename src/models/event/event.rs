@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use super::super::calendar::Calendar;
+use super::super::{calendar::Calendar, status::Status};
 
 #[derive(Queryable, Selectable, Identifiable, Associations, Deserialize, Serialize)]
 #[diesel(
@@ -18,4 +18,5 @@ pub struct Event {
     pub description: Option<String>,
     pub start_date_time: DateTime<Utc>,
     pub end_date_time: DateTime<Utc>,
+    pub status: Option<Status>,
 }

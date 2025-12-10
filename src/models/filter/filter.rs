@@ -8,12 +8,15 @@ use diesel::{
 };
 use std::io::Write;
 
+use super::super::status::Status;
+
 #[derive(Queryable, Selectable)]
 #[diesel(table_name = crate::schema::filter)]
 pub struct Filter {
     pub id: u32,
     pub filter_type: FilterType,
     pub name: String,
+    pub status: Option<Status>,
 }
 
 #[derive(SqlType)]

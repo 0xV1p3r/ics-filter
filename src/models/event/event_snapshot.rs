@@ -1,7 +1,10 @@
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
 
-use super::{super::calendar::Calendar, Event};
+use super::{
+    super::{calendar::Calendar, status::Status},
+    Event,
+};
 
 #[derive(Queryable, Selectable, Identifiable, Associations)]
 #[diesel(
@@ -19,4 +22,5 @@ pub struct EventSnapshot {
     pub description: Option<String>,
     pub start_date_time: DateTime<Utc>,
     pub end_date_time: DateTime<Utc>,
+    pub status: Option<Status>,
 }
