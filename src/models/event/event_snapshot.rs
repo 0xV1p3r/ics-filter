@@ -6,18 +6,17 @@ use super::{super::calendar::Calendar, Event};
 #[derive(Queryable, Selectable, Identifiable, Associations)]
 #[diesel(
     belongs_to(Calendar),
-    belongs_to(Event),
-    table_name = crate::schema::event_snapshots,
+    belongs_to(Event, foreign_key = id),
+    table_name = crate::schema::event_snapshot,
     treat_none_as_default_value = false
 )]
 pub struct EventSnapshot {
-    pub id: i32,
-    pub calendar_id: i32,
-    pub event_id: i32,
-    pub timestamp: DateTime<Utc>,
-    pub uid: String,
+    pub id: u32,
+    pub snapshot_at: DateTime<Utc>,
+    pub calendar_id: u32,
     pub summary: String,
     pub location: String,
     pub description: Option<String>,
-    pub start_date: DateTime<Utc>,
+    pub start_date_time: DateTime<Utc>,
+    pub end_date_time: DateTime<Utc>,
 }

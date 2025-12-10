@@ -1,4 +1,3 @@
-use chrono::{DateTime, Utc};
 use diesel::{
     deserialize::{FromSql, FromSqlRow},
     expression::AsExpression,
@@ -12,11 +11,9 @@ use std::io::Write;
 #[derive(Queryable, Selectable)]
 #[diesel(table_name = crate::schema::filter_criteria)]
 pub struct FilterCriteria {
-    pub id: i32,
-    pub criteria_type: FilterCriteriaType,
+    pub id: u32,
+    pub filter_criteria_type: FilterCriteriaType,
     pub value: String,
-    created_at: DateTime<Utc>,
-    updated_at: DateTime<Utc>,
 }
 
 #[derive(SqlType)]
