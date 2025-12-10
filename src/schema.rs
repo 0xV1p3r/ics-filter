@@ -2,98 +2,134 @@
 
 pub mod sql_types {
     #[derive(diesel::query_builder::QueryId, Clone, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "filter_criteria_type_enum"))]
+    pub struct FilterCriteriaTypeEnum;
+
+    #[derive(diesel::query_builder::QueryId, Clone, diesel::sql_types::SqlType)]
     #[diesel(postgres_type(name = "filter_type_enum"))]
     pub struct FilterTypeEnum;
+
+    #[derive(diesel::query_builder::QueryId, Clone, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "status_enum"))]
+    pub struct StatusEnum;
 }
 
 diesel::table! {
-    calendars (id) {
+    calendar (id) {
         id -> Int4,
         name -> Text,
-        url -> Text,
         color -> Text,
-        created_at -> Timestamp,
-        updated_at -> Timestamp,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
     }
 }
 
 diesel::table! {
-    event_snapshots (id) {
+    use diesel::sql_types::*;
+    use super::sql_types::StatusEnum;
+
+    event (id) {
         id -> Int4,
-        event_id -> Int4,
-        calendar_id -> Int4,
-        uid -> Text,
+        calendar_id -> Nullable<Int4>,
+        status -> Nullable<StatusEnum>,
         summary -> Text,
         location -> Text,
         description -> Nullable<Text>,
-        start_date -> Timestamp,
-        end_date -> Timestamp,
-        timestamp -> Timestamp,
+        start_date_time -> Timestamptz,
+        end_date_time -> Timestamptz,
+        created_at -> Timestamptz,
     }
 }
 
 diesel::table! {
-    events (id) {
+    use diesel::sql_types::*;
+    use super::sql_types::StatusEnum;
+
+    event_snapshot (id, snapshot_at) {
         id -> Int4,
-        calendar_id -> Int4,
-        uid -> Text,
+        snapshot_at -> Timestamptz,
+        calendar_id -> Nullable<Int4>,
+        status -> Nullable<StatusEnum>,
         summary -> Text,
         location -> Text,
         description -> Nullable<Text>,
-        start_date -> Timestamp,
-        end_date -> Timestamp,
-        created_at -> Timestamp,
-    }
-}
-
-diesel::table! {
-    filter_criteria (id) {
-        id -> Int4,
-        filter_id -> Int4,
-        criteria_type -> Text,
-        value -> Text,
-        created_at -> Timestamp,
-        updated_at -> Timestamp,
-    }
-}
-
-diesel::table! {
-    filtered_calendars (id) {
-        id -> Int4,
-        filter_id -> Int4,
-        calendar_id -> Int4,
-        name -> Text,
-        color -> Text,
-        created_at -> Timestamp,
-        updated_at -> Timestamp,
+        start_date_time -> Timestamptz,
+        end_date_time -> Timestamptz,
     }
 }
 
 diesel::table! {
     use diesel::sql_types::*;
     use super::sql_types::FilterTypeEnum;
+    use super::sql_types::StatusEnum;
 
-    filters (id) {
+    filter (id) {
         id -> Int4,
-        filter_type -> FilterTypeEnum,
         name -> Text,
-        created_at -> Timestamp,
-        updated_at -> Timestamp,
+        filter_type -> FilterTypeEnum,
+        status -> Nullable<StatusEnum>,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
     }
 }
 
-diesel::joinable!(event_snapshots -> calendars (calendar_id));
-diesel::joinable!(event_snapshots -> events (event_id));
-diesel::joinable!(events -> calendars (calendar_id));
-diesel::joinable!(filter_criteria -> filters (filter_id));
-diesel::joinable!(filtered_calendars -> calendars (calendar_id));
-diesel::joinable!(filtered_calendars -> filters (filter_id));
+diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::FilterCriteriaTypeEnum;
+
+    filter_criteria (id) {
+        id -> Int4,
+        filter_id -> Nullable<Int4>,
+        filter_criteria_type -> FilterCriteriaTypeEnum,
+        value -> Text,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    filtered_calendar (id) {
+        id -> Int4,
+        source_id -> Nullable<Int4>,
+        filter_id -> Nullable<Int4>,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    merged_calendar (id) {
+        id -> Int4,
+        source_id -> Nullable<Int4>,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    remote_calendar (id) {
+        id -> Int4,
+        url -> Nullable<Text>,
+        last_refresh -> Nullable<Timestamptz>,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
+    }
+}
+
+diesel::joinable!(event -> calendar (calendar_id));
+diesel::joinable!(event_snapshot -> calendar (calendar_id));
+diesel::joinable!(event_snapshot -> event (id));
+diesel::joinable!(filter_criteria -> filter (filter_id));
+diesel::joinable!(filtered_calendar -> filter (filter_id));
+diesel::joinable!(remote_calendar -> calendar (id));
 
 diesel::allow_tables_to_appear_in_same_query!(
-    calendars,
-    event_snapshots,
-    events,
+    calendar,
+    event,
+    event_snapshot,
+    filter,
     filter_criteria,
-    filtered_calendars,
-    filters,
+    filtered_calendar,
+    merged_calendar,
+    remote_calendar,
 );
