@@ -15,10 +15,14 @@ pub mod sql_types {
 }
 
 diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::StatusEnum;
+
     calendar (id) {
         id -> Int4,
-        name -> Text,
         color -> Text,
+        name -> Text,
+        status -> Nullable<StatusEnum>,
         created_at -> Timestamptz,
         updated_at -> Timestamptz,
     }
