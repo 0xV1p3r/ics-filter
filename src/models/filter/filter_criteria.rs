@@ -23,9 +23,12 @@ struct FilterCriteriaSqlType;
 #[derive(Debug, FromSqlRow, AsExpression)]
 #[diesel(sql_type = FilterCriteriaSqlType)]
 pub enum FilterCriteriaType {
-    Summary,
-    Location,
     Description,
+    Location,
+    Summary,
+    DescriptionContains,
+    LocationContains,
+    SummaryConstains,
 }
 
 impl Into<&[u8]> for &FilterCriteriaType {
@@ -34,6 +37,9 @@ impl Into<&[u8]> for &FilterCriteriaType {
             FilterCriteriaType::Description => b"description",
             FilterCriteriaType::Location => b"location",
             FilterCriteriaType::Summary => b"summary",
+            FilterCriteriaType::DescriptionContains => b"description_contains",
+            FilterCriteriaType::LocationContains => b"location_contains",
+            FilterCriteriaType::SummaryConstains => b"summary_contains",
         }
     }
 }
@@ -46,6 +52,9 @@ impl TryFrom<&[u8]> for FilterCriteriaType {
             b"description" => Ok(FilterCriteriaType::Description),
             b"location" => Ok(FilterCriteriaType::Location),
             b"summary" => Ok(FilterCriteriaType::Summary),
+            b"description_contains" => Ok(FilterCriteriaType::DescriptionContains),
+            b"location_contains" => Ok(FilterCriteriaType::LocationContains),
+            b"summary_contains" => Ok(FilterCriteriaType::SummaryConstains),
             _ => Err("Unknown enum variant"),
         }
     }
