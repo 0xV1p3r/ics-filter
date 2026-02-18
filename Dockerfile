@@ -10,14 +10,14 @@ COPY ./Cargo.lock ./Cargo.lock
 RUN ["apk", "add", "musl-dev", "openssl", "openssl-dev", "openssl-libs-static", "--no-cache"]
 RUN ["cargo", "build", "--release"]
 
-FROM alpine:3.16
+FROM alpine:latest
 
 #Install Caddy
 RUN ["apk", "update"]
 RUN ["apk", "add", "caddy", "--no-cache"]
 
 #Setup cron
-RUN ["apk", "add", "busybox-initscripts", "openrc", "--no-cache"]
+RUN ["apk", "add", "busybox-openrc", "openrc", "--no-cache"]
 RUN ["sh", "-c", "crontab -l | { cat; echo \"30 * * * * cd /app && ./ics-filter\"; } | crontab -"]
 
 WORKDIR /app
