@@ -1,5 +1,7 @@
 # Changelog
-
+## 1.2.1
+ - bumped docker base image version
+---
 ## 1.2.0
  - Added whitelist 
  - Performance improvement
