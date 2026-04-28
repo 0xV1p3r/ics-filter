@@ -1,63 +1,42 @@
-# ICS Filter
+# sv
 
-ICS Filter is a tool designed to manage and filter events from ICS calendar files. It allows you to synchronize and clean your calendars based on a configurable blacklist, deployable via Docker, and offers notification and Git archiving functionalities.
+Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
 
-## Features
+## Creating a project
 
-*   **Event Filtering**: Takes a URL to an ICS file or calendar and filters out events based on a configured blacklist.
-*   **Docker Deployment**: Easily deployable and manageable via Docker.
-*   **Notification System**:
-    *   **Gotify**: Send notifications about removed, added, or modified events via Gotify.
-    *   **Email**: Send email notifications for calendar changes.
-*   **Git Archiving**: Optionally commit all modifications of tracked ICS files to a Git repository, providing a historical record of changes.
+If you're seeing this, you've probably already done this step. Congrats!
 
-## Configuration
-
-The `config.toml` file is used to configure ICS Filter. Below is an example of the configuration structure:
-
-```toml
-# Example config.toml
-
-[[calendars]]
-url = "https://example.com/my-calendar.ics" 
-blacklist = ["Meeting with John", "Dentist Appointment"]
-
-# Git Archiving Configuration (Optional - Comment out/remove if not used)
-[git.signature]
-username = "Your Git Username"
-email = "your.email@example.com"
-
-[git.remote]
-domain = "github.com" 
-repository = "your-repo"
-username = "your-git-username"
-token = "your-personal-access-token"
-
-# Notification Configuration (Optional - Comment out/remove if not used)
-[notifications.email]
-smtp_server = "smtp.example.com:587"
-username = "your-email@example.com"
-password = "your-email-password"
-recipients = ["recipient1@example.com", "recipient2@example.com"]
-
-[notifications.gotify]
-server = "https://gotify.example.com"
-token = "your-gotify-app-token"
+```sh
+# create a new project
+npx sv create my-app
 ```
 
-## Deployment with Docker
+To recreate this project with the same configuration:
 
-ICS Filter is designed to be easily deployed using Docker.
-
-### `docker-compose.yaml` Example
-
-```yaml
-services:
-  app:
-    image: ghcr.io/0xv1p3r/ics-filter:latest
-    restart: unless-stopped
-    ports:
-      - 5000:80
-    volumes:
-      - ./config.toml:/app/config.toml:ro
+```sh
+# recreate this project
+pnpm dlx sv@0.15.1 create --template minimal --types ts --add tailwindcss="plugins:none" --install pnpm ics-filter
 ```
+
+## Developing
+
+Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+
+```sh
+npm run dev
+
+# or start the server and open the app in a new browser tab
+npm run dev -- --open
+```
+
+## Building
+
+To create a production version of your app:
+
+```sh
+npm run build
+```
+
+You can preview the production build with `npm run preview`.
+
+> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
