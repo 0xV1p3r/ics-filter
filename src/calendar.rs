@@ -1,6 +1,6 @@
 use crate::cache::{is_cached, load_from_cache, save_to_cache};
 use crate::calendar::PipelineResult::{New, Nothing, Updated};
-use crate::config::{CalendarConfig, Config};
+use crate::config::{CalendarConfig, Config, NotificationConfig};
 use crate::diff::{DiffReport, generate_diff_report, raw_ics_identical};
 
 use anyhow::{Context, Result, bail};
@@ -23,7 +23,7 @@ struct AppCalendar {
 enum PipelineResult {
     New(String),
     Nothing,
-    Updated((String, DiffReport)),
+    Updated(Option<(String, DiffReport)>),
 }
 
 fn build_filtered_calendar(calendar: &AppCalendar) -> Result<()> {
@@ -122,7 +122,10 @@ fn get_calendar_name(url: &Url) -> Result<String> {
     Ok(name.to_string())
 }
 
-fn pipeline_for_calendar(calendar_config: &CalendarConfig) -> Result<PipelineResult> {
+fn pipeline_for_calendar(
+    calendar_config: &CalendarConfig,
+    notification_config: &Option<NotificationConfig>,
+) -> Result<PipelineResult> {
     let calendar = calendar_from_config(calendar_config)?;
     let ics_filename = format!("{}.ics", calendar.name);
     let raw_ics = fetch_calendar(&calendar.url)?;
@@ -155,10 +158,13 @@ fn pipeline_for_calendar(calendar_config: &CalendarConfig) -> Result<PipelineRes
         Err(e) => bail!("Failed to parse calendar '{}'!\n{e}", calendar.name),
     };
 
-    Ok(Updated((
-        calendar.name,
-        generate_diff_report(&old_calendar, &new_calendar)?,
-    )))
+    match notification_config {
+        Some(cfg) => {
+            let report = generate_diff_report(&old_calendar, &new_calendar, cfg.format_as_table)?;
+            Ok(Updated(Some((calendar.name, report))))
+        }
+        None => Ok(Updated(None)),
+    }
 }
 
 pub fn run_pipeline(config: &Config) -> Result<(Vec<String>, Vec<DiffReport>)> {
@@ -167,12 +173,14 @@ pub fn run_pipeline(config: &Config) -> Result<(Vec<String>, Vec<DiffReport>)> {
     let mut updated_names = Vec::with_capacity(calendar_count);
 
     for calendar in &config.calendars {
-        match pipeline_for_calendar(calendar)? {
+        match pipeline_for_calendar(calendar, &config.notifications)? {
             New(result) => updated_names.push(result),
             Nothing => (),
             Updated(result) => {
-                reports.push(result.1);
-                updated_names.push(result.0);
+                if let Some((name, diff_report)) = result {
+                    updated_names.push(name);
+                    reports.push(diff_report);
+                }
             }
         }
     }

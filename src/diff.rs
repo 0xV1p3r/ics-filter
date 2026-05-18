@@ -46,7 +46,7 @@ enum EventField {
 }
 
 impl<'a> EventDiff<'a> {
-    fn to_str_table(&'_ self) -> Result<String> {
+    fn to_string_table(&self) -> Result<String> {
         let comparison_result = stringify::event_diff_to_comparison_rows(self)?;
         let mut event_fields = comparison_result.0;
         let evt_field_mod_tracker = comparison_result.1;
@@ -68,6 +68,32 @@ impl<'a> EventDiff<'a> {
         }
 
         Ok(table.to_string())
+    }
+
+    fn to_string(&self) -> Result<String> {
+        let comparison_result = stringify::event_diff_to_comparison_rows(self)?;
+        let mut event_fields = comparison_result.0;
+        let evt_field_mod_tracker = comparison_result.1;
+
+        stringify::insert_unmodified_event_fields(
+            self.old,
+            &mut event_fields,
+            evt_field_mod_tracker,
+        )?;
+
+        let mut result = String::new();
+
+        for field in event_fields {
+            let row = if field[1] == field[2] {
+                format!("{}: {}\n", field[0], field[1])
+            } else {
+                format!("{}: {} -> {}\n", field[0], field[1], field[2])
+            };
+
+            result.push_str(&row);
+        }
+
+        Ok(result)
     }
 }
 
@@ -207,25 +233,40 @@ fn events_identical(event1: &Event, event2: &Event) -> bool {
     description && date_end && date_start && location && priority && summary
 }
 
-pub fn generate_diff_report(old: &Calendar, new: &Calendar) -> Result<DiffReport> {
+pub fn generate_diff_report(old: &Calendar, new: &Calendar, as_table: bool) -> Result<DiffReport> {
     let mut report = DiffReport::default();
     let diff = diff_calendars(old, new)?;
 
     for deletion in diff.deletions {
-        report
-            .deletions
-            .push(stringify::event_to_str_table(&deletion)?);
+        let deletion_str = if as_table {
+            stringify::event_to_string_table(&deletion)?
+        } else {
+            stringify::event_to_string(&deletion)?
+        };
+
+        report.deletions.push(deletion_str);
     }
 
     for insertion in diff.insertions {
-        report
-            .insertions
-            .push(stringify::event_to_str_table(&insertion)?);
+        let insertion_str = if as_table {
+            stringify::event_to_string_table(&insertion)?
+        } else {
+            stringify::event_to_string(&insertion)?
+        };
+
+        report.insertions.push(insertion_str);
     }
 
     for modifications in diff.modifications {
         let event_diff = diff_events(&modifications.0, &modifications.1);
-        report.modifications.push(event_diff.to_str_table()?);
+
+        let mod_str = if as_table {
+            event_diff.to_string_table()?
+        } else {
+            event_diff.to_string()?
+        };
+
+        report.modifications.push(mod_str);
     }
 
     Ok(report)
@@ -350,25 +391,24 @@ mod stringify {
         Ok(value)
     }
 
-    pub fn event_to_str_table(event: &Event) -> Result<String> {
-        let summary = event.get_summary().unwrap_or("No Heading");
-        let (date, start) = match event.get_start() {
-            Some(d) => date_to_str(&d)?,
-            None => ("None".to_string(), "None".to_string()),
-        };
-        let (_, end) = match event.get_end() {
-            Some(d) => date_to_str(&d)?,
-            None => ("None".to_string(), "None".to_string()),
-        };
-        let location = event.get_location().unwrap_or("None");
-        let priority = match event.get_priority() {
-            Some(p) => p.to_string(),
-            None => "None".to_string(),
-        };
-        let description = event.get_description().unwrap_or("None");
-        let description = trim_description(description);
+    pub fn event_to_string(event: &Event) -> Result<String> {
+        let fields = get_event_fields(event)?;
+
+        let mut result = String::new();
+
+        for field in fields {
+            result.push_str(&field);
+            result.push('\n');
+        }
+
+        Ok(result)
+    }
+
+    pub fn event_to_string_table(event: &Event) -> Result<String> {
+        let [summary, date, start, end, location, priority, description] = get_event_fields(event)?;
 
         let mut table = Table::new();
+
         table.add_row(row!["", summary]);
         table.add_row(row!["date", date]);
         table.add_row(row!["start", start]);
@@ -379,6 +419,27 @@ mod stringify {
 
         table.printstd();
         Ok(table.to_string())
+    }
+
+    fn get_event_fields(event: &Event) -> Result<[String; 7]> {
+        let summary = String::from(event.get_summary().unwrap_or("No Heading"));
+        let (date, start) = match event.get_start() {
+            Some(d) => date_to_str(&d)?,
+            None => ("None".to_string(), "None".to_string()),
+        };
+        let (_, end) = match event.get_end() {
+            Some(d) => date_to_str(&d)?,
+            None => ("None".to_string(), "None".to_string()),
+        };
+        let location = String::from(event.get_location().unwrap_or("None"));
+        let priority = match event.get_priority() {
+            Some(p) => p.to_string(),
+            None => "None".to_string(),
+        };
+        let description = event.get_description().unwrap_or("None");
+        let description = trim_description(description);
+
+        Ok([summary, date, start, end, location, priority, description])
     }
 
     pub fn insert_unmodified_event_fields(

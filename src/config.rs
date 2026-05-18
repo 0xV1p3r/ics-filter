@@ -58,6 +58,7 @@ pub struct GitSignatureConfig {
 pub struct NotificationConfig {
     pub email: Option<EmailConfig>,
     pub gotify: Option<GotifyConfig>,
+    pub format_as_table: bool,
 }
 
 pub fn load_config() -> Result<Config> {

@@ -16,6 +16,9 @@ repository = ""
 username = ""
 token = ""
 
+[notifications]
+format_as_table = false
+
 [notifications.email]
 smtp_server = ""
 username = ""
