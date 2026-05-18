@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
 use icalendar::{Calendar, CalendarComponent, Component, Event, EventLike};
+use prettytable::{Table, row};
 use regex::Regex;
 use similar::{ChangeTag, TextDiff};
 use std::cmp::PartialEq;
@@ -14,7 +15,7 @@ struct CalendarDiff {
     modifications: Vec<(Event, Event)>,
 }
 
-#[derive(PartialEq)]
+#[derive(Clone, Copy, PartialEq)]
 enum ChangeType {
     Deletion,
     Insertion,
@@ -28,6 +29,12 @@ pub struct DiffReport {
     pub modifications: Vec<String>,
 }
 
+struct EventDiff<'a> {
+    field_diff: Vec<(EventField, ChangeType)>,
+    new: &'a Event,
+    old: &'a Event,
+}
+
 #[derive(PartialEq)]
 enum EventField {
     Description,
@@ -36,6 +43,32 @@ enum EventField {
     Location,
     Priority,
     Summary,
+}
+
+impl<'a> EventDiff<'a> {
+    fn to_str_table(&'_ self) -> Result<String> {
+        let comparison_result = stringify::event_diff_to_comparison_rows(self)?;
+        let mut event_fields = comparison_result.0;
+        let evt_field_mod_tracker = comparison_result.1;
+
+        stringify::insert_unmodified_event_fields(
+            self.old,
+            &mut event_fields,
+            evt_field_mod_tracker,
+        )?;
+
+        let mut table = Table::new();
+
+        for field in event_fields {
+            table.add_row(row![
+                field[0].as_str(),
+                field[1].as_str(),
+                field[2].as_str(),
+            ]);
+        }
+
+        Ok(table.to_string())
+    }
 }
 
 fn diff_calendars(old: &Calendar, new: &Calendar) -> Result<CalendarDiff> {
@@ -69,7 +102,7 @@ fn diff_calendars(old: &Calendar, new: &Calendar) -> Result<CalendarDiff> {
     Ok(calendar_diff)
 }
 
-fn diff_events(old: &Event, new: &Event) -> Vec<(EventField, ChangeType)> {
+fn diff_events<'a>(old: &'a Event, new: &'a Event) -> EventDiff<'a> {
     let mut result = Vec::new();
 
     let (old_description, new_description) = (old.get_description(), new.get_description());
@@ -156,7 +189,11 @@ fn diff_events(old: &Event, new: &Event) -> Vec<(EventField, ChangeType)> {
         ));
     }
 
-    result
+    EventDiff {
+        field_diff: result,
+        new,
+        old,
+    }
 }
 
 fn events_identical(event1: &Event, event2: &Event) -> bool {
@@ -175,20 +212,20 @@ pub fn generate_diff_report(old: &Calendar, new: &Calendar) -> Result<DiffReport
     let diff = diff_calendars(old, new)?;
 
     for deletion in diff.deletions {
-        report.deletions.push(stringify::event_to_str(&deletion)?);
+        report
+            .deletions
+            .push(stringify::event_to_str_table(&deletion)?);
     }
 
     for insertion in diff.insertions {
-        report.insertions.push(stringify::event_to_str(&insertion)?);
+        report
+            .insertions
+            .push(stringify::event_to_str_table(&insertion)?);
     }
 
     for modifications in diff.modifications {
         let event_diff = diff_events(&modifications.0, &modifications.1);
-        report.modifications.push(stringify::event_diff_to_str(
-            event_diff,
-            &modifications.0,
-            &modifications.1,
-        )?);
+        report.modifications.push(event_diff.to_str_table()?);
     }
 
     Ok(report)
@@ -228,7 +265,7 @@ pub fn raw_ics_identical(old: &str, new: &str) -> Result<bool> {
 }
 
 mod stringify {
-    use super::{ChangeType, Event, EventField};
+    use super::{ChangeType, Event, EventDiff, EventField};
     use anyhow::Result;
     use chrono::NaiveDateTime;
     use icalendar::{Component, DatePerhapsTime, EventLike};
@@ -248,15 +285,13 @@ mod stringify {
         Ok((date, time))
     }
 
-    fn event_diff_to_comparison_rows(
-        diffs: Vec<(EventField, ChangeType)>,
-        old: &Event,
-        new: &Event,
+    pub fn event_diff_to_comparison_rows(
+        event_diff: &EventDiff,
     ) -> Result<(Vec<[String; 3]>, [bool; 6])> {
         let mut rows = vec![[const { String::new() }; 3]; 6];
         let mut evt_field_mod_tracker = [false; 6];
 
-        for diff in diffs {
+        for diff in &event_diff.field_diff {
             let idx = match diff.0 {
                 EventField::DateEnd => 2,
                 EventField::DateStart => 1,
@@ -272,16 +307,16 @@ mod stringify {
 
             rows[idx] = match diff_type {
                 ChangeType::Deletion => {
-                    let value = event_field_to_str(&diff.0, old)?;
+                    let value = extract_evt_field_as_str(&diff.0, event_diff.old)?;
                     [field_str.to_string(), value, "None".to_string()]
                 }
                 ChangeType::Insertion => {
-                    let value = event_field_to_str(&diff.0, new)?;
+                    let value = extract_evt_field_as_str(&diff.0, event_diff.new)?;
                     [field_str.to_string(), "None".to_string(), value]
                 }
                 ChangeType::Modification => {
-                    let old_value = event_field_to_str(&diff.0, old)?;
-                    let new_value = event_field_to_str(&diff.0, new)?;
+                    let old_value = extract_evt_field_as_str(&diff.0, event_diff.old)?;
+                    let new_value = extract_evt_field_as_str(&diff.0, event_diff.new)?;
                     [field_str.to_string(), old_value, new_value]
                 }
             };
@@ -290,31 +325,7 @@ mod stringify {
         Ok((rows, evt_field_mod_tracker))
     }
 
-    pub fn event_diff_to_str(
-        diffs: Vec<(EventField, ChangeType)>,
-        old: &Event,
-        new: &Event,
-    ) -> Result<String> {
-        let comparison_result = event_diff_to_comparison_rows(diffs, old, new)?;
-        let mut event_fields = comparison_result.0;
-        let evt_field_mod_tracker = comparison_result.1;
-
-        insert_unmodified_event_fields(old, &mut event_fields, evt_field_mod_tracker)?;
-
-        let mut table = Table::new();
-
-        for field in event_fields {
-            table.add_row(row![
-                field[0].as_str(),
-                field[1].as_str(),
-                field[2].as_str(),
-            ]);
-        }
-
-        Ok(table.to_string())
-    }
-
-    fn event_field_to_str(event_field: &EventField, event: &Event) -> Result<String> {
+    fn extract_evt_field_as_str(event_field: &EventField, event: &Event) -> Result<String> {
         let value = match event_field {
             EventField::DateEnd => {
                 let (end_date, end_time) = date_to_str(&event.get_end().unwrap())?;
@@ -339,7 +350,7 @@ mod stringify {
         Ok(value)
     }
 
-    pub fn event_to_str(event: &Event) -> Result<String> {
+    pub fn event_to_str_table(event: &Event) -> Result<String> {
         let summary = event.get_summary().unwrap_or("No Heading");
         let (date, start) = match event.get_start() {
             Some(d) => date_to_str(&d)?,
@@ -370,7 +381,7 @@ mod stringify {
         Ok(table.to_string())
     }
 
-    fn insert_unmodified_event_fields(
+    pub fn insert_unmodified_event_fields(
         event: &Event,
         event_fields: &mut Vec<[String; 3]>,
         event_field_mod_tracker: [bool; 6],
@@ -391,7 +402,7 @@ mod stringify {
                 _ => None,
             };
 
-            let value = event_field_to_str(&event_field.unwrap(), event)?;
+            let value = extract_evt_field_as_str(&event_field.unwrap(), event)?;
             event_fields[idx] = [field_str.to_string(), value.clone(), value.clone()];
         }
 
