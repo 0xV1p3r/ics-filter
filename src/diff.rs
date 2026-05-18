@@ -1,13 +1,10 @@
 use anyhow::{Context, Result};
-use chrono::NaiveDateTime;
-use icalendar::{Calendar, CalendarComponent, Component, DatePerhapsTime, Event, EventLike};
-use prettytable::{Table, row};
+use icalendar::{Calendar, CalendarComponent, Component, Event, EventLike};
 use regex::Regex;
 use similar::{ChangeTag, TextDiff};
 use std::cmp::PartialEq;
 use std::collections::{HashMap, HashSet};
 
-static MAX_CELL_WIDTH: usize = 40;
 static TIMESTAMP_REGEX: &str = r"DTSTAMP:\d{8}T\d{6}Z";
 
 #[derive(Default)]
@@ -41,17 +38,6 @@ enum EventField {
     Summary,
 }
 
-fn date_to_str(date: &DatePerhapsTime) -> Result<(String, String)> {
-    let raw = date.to_property("START");
-    let raw = raw.value();
-    let date_time = NaiveDateTime::parse_from_str(raw, "%Y%m%dT%H%M%S")?;
-
-    let date = date_time.format("%d.%m.%Y").to_string();
-    let time = date_time.format("%H:%M").to_string();
-
-    Ok((date, time))
-}
-
 fn diff_calendars(old: &Calendar, new: &Calendar) -> Result<CalendarDiff> {
     let (mut old_uids, old_events) = map_events(old)?;
     let (mut new_uids, new_events) = map_events(new)?;
@@ -60,6 +46,7 @@ fn diff_calendars(old: &Calendar, new: &Calendar) -> Result<CalendarDiff> {
     let uids: HashSet<&str> = old_uids.into_iter().collect();
 
     let mut calendar_diff = CalendarDiff::default();
+
     for uid in uids {
         let old = old_events.get(uid);
         let new = new_events.get(uid);
@@ -172,103 +159,6 @@ fn diff_events(old: &Event, new: &Event) -> Vec<(EventField, ChangeType)> {
     result
 }
 
-fn event_diff_to_str(
-    diffs: Vec<(EventField, ChangeType)>,
-    old: &Event,
-    new: &Event,
-) -> Result<String> {
-    let mut fields = vec![[const { String::new() }; 3]; 6];
-    let mut track_fields = [false; 6];
-    let field_strings = ["", "start", "end", "location", "priority", "description"];
-
-    for diff in diffs {
-        let idx = match diff.0 {
-            EventField::DateEnd => 2,
-            EventField::DateStart => 1,
-            EventField::Description => 5,
-            EventField::Location => 3,
-            EventField::Priority => 4,
-            EventField::Summary => 0,
-        };
-        let field_str = field_strings[idx];
-        track_fields[idx] = true;
-        if diff.1 == ChangeType::Insertion {
-            let mut value = event_field_to_str(&diff.0, new)?;
-
-            if diff.0 == EventField::Description {
-                value = trim_description(value.as_str());
-            }
-
-            fields[idx] = [field_str.to_string(), "None".to_string(), value];
-        } else if diff.1 == ChangeType::Deletion {
-            let mut value = event_field_to_str(&diff.0, old)?;
-
-            if diff.0 == EventField::Description {
-                value = trim_description(value.as_str());
-            }
-
-            fields[idx] = [field_str.to_string(), value, "None".to_string()];
-        } else {
-            let mut old_value = event_field_to_str(&diff.0, old)?;
-            let mut new_value = event_field_to_str(&diff.0, new)?;
-
-            if diff.0 == EventField::Description {
-                old_value = trim_description(old_value.as_str());
-                new_value = trim_description(new_value.as_str());
-            }
-
-            fields[idx] = [field_str.to_string(), old_value, new_value];
-        }
-    }
-
-    for (idx, field) in track_fields.iter().enumerate() {
-        if *field {
-            continue;
-        }
-        let field_str = field_strings[idx];
-        let event_field = match idx {
-            0 => Some(EventField::Summary),
-            1 => Some(EventField::DateStart),
-            2 => Some(EventField::DateEnd),
-            3 => Some(EventField::Location),
-            4 => Some(EventField::Priority),
-            5 => Some(EventField::Description),
-            _ => None,
-        };
-        let value = event_field_to_str(&event_field.unwrap(), old)?;
-        fields[idx] = [field_str.to_string(), value.clone(), value.clone()];
-    }
-
-    let mut table = Table::new();
-    for field in fields {
-        table.add_row(row![
-            field[0].as_str(),
-            field[1].as_str(),
-            field[2].as_str(),
-        ]);
-    }
-
-    Ok(table.to_string())
-}
-
-fn event_field_to_str(event_field: &EventField, event: &Event) -> Result<String> {
-    let value = match event_field {
-        EventField::DateEnd => {
-            let (end_date, end_time) = date_to_str(&event.get_end().unwrap())?;
-            format!("{end_date} {end_time}")
-        }
-        EventField::DateStart => {
-            let (start_date, start_time) = date_to_str(&event.get_start().unwrap())?;
-            format!("{start_date} {start_time}")
-        }
-        EventField::Description => event.get_description().unwrap().to_string(),
-        EventField::Location => event.get_location().unwrap().to_string(),
-        EventField::Priority => format!("{}", event.get_priority().unwrap()),
-        EventField::Summary => event.get_summary().unwrap().to_string(),
-    };
-    Ok(value)
-}
-
 fn events_identical(event1: &Event, event2: &Event) -> bool {
     let description = event1.get_description() == event2.get_description();
     let date_end = event1.get_end() == event2.get_end();
@@ -280,51 +170,21 @@ fn events_identical(event1: &Event, event2: &Event) -> bool {
     description && date_end && date_start && location && priority && summary
 }
 
-fn event_to_str(event: &Event) -> Result<String> {
-    // TODO: For logging -> If a field is None emit a warning
-    let summary = event.get_summary().unwrap_or("No Heading");
-    let (date, start) = match event.get_start() {
-        Some(d) => date_to_str(&d)?,
-        None => ("None".to_string(), "None".to_string()),
-    };
-    let (_, end) = match event.get_end() {
-        Some(d) => date_to_str(&d)?,
-        None => ("None".to_string(), "None".to_string()),
-    };
-    let location = event.get_location().unwrap_or("None");
-    let priority = match event.get_priority() {
-        Some(p) => p.to_string(),
-        None => "None".to_string(),
-    };
-    let description = event.get_description().unwrap_or("None");
-    let description = trim_description(description);
-
-    let mut table = Table::new();
-    table.add_row(row!["", summary]);
-    table.add_row(row!["date", date]);
-    table.add_row(row!["start", start]);
-    table.add_row(row!["end", end]);
-    table.add_row(row!["location", location]);
-    table.add_row(row!["priority", priority]);
-    table.add_row(row!["description", description]);
-
-    table.printstd();
-    Ok(table.to_string())
-}
-
 pub fn generate_diff_report(old: &Calendar, new: &Calendar) -> Result<DiffReport> {
     let mut report = DiffReport::default();
     let diff = diff_calendars(old, new)?;
 
     for deletion in diff.deletions {
-        report.deletions.push(event_to_str(&deletion)?);
+        report.deletions.push(stringify::event_to_str(&deletion)?);
     }
+
     for insertion in diff.insertions {
-        report.insertions.push(event_to_str(&insertion)?);
+        report.insertions.push(stringify::event_to_str(&insertion)?);
     }
+
     for modifications in diff.modifications {
         let event_diff = diff_events(&modifications.0, &modifications.1);
-        report.modifications.push(event_diff_to_str(
+        report.modifications.push(stringify::event_diff_to_str(
             event_diff,
             &modifications.0,
             &modifications.1,
@@ -352,10 +212,12 @@ fn map_events(calendar: &Calendar) -> Result<(Vec<&str>, HashMap<&str, Event>)> 
 pub fn raw_ics_identical(old: &str, new: &str) -> Result<bool> {
     let regex =
         Regex::new(TIMESTAMP_REGEX).with_context(|| "Failed to compile regular expression!")?;
+
     for diff in TextDiff::from_lines(old, new).iter_all_changes() {
         if diff.tag() == ChangeTag::Equal {
             continue;
         }
+
         if !regex.is_match(&diff.to_string()) {
             // Ignore the 'DTSTAMP' field
             return Ok(false);
@@ -365,19 +227,193 @@ pub fn raw_ics_identical(old: &str, new: &str) -> Result<bool> {
     Ok(true)
 }
 
-fn trim_description(description: &str) -> String {
-    let mut new_description = String::new();
+mod stringify {
+    use super::{ChangeType, Event, EventField};
+    use anyhow::Result;
+    use chrono::NaiveDateTime;
+    use icalendar::{Component, DatePerhapsTime, EventLike};
+    use prettytable::{Table, row};
 
-    for line in description.lines() {
-        let line_len = line.len();
-        let new_line = if line_len > MAX_CELL_WIDTH {
-            textwrap::fill(line, MAX_CELL_WIDTH)
-        } else {
-            line.to_string()
-        };
-        new_description.push_str(&new_line);
-        new_description.push('\n');
+    static MAX_CELL_WIDTH: usize = 40;
+    static EVENT_FIELD_STR: [&str; 6] = ["", "start", "end", "location", "priority", "description"];
+
+    fn date_to_str(date: &DatePerhapsTime) -> Result<(String, String)> {
+        let raw = date.to_property("START");
+        let raw = raw.value();
+        let date_time = NaiveDateTime::parse_from_str(raw, "%Y%m%dT%H%M%S")?;
+
+        let date = date_time.format("%d.%m.%Y").to_string();
+        let time = date_time.format("%H:%M").to_string();
+
+        Ok((date, time))
     }
 
-    new_description
+    fn event_diff_to_comparison_rows(
+        diffs: Vec<(EventField, ChangeType)>,
+        old: &Event,
+        new: &Event,
+    ) -> Result<(Vec<[String; 3]>, [bool; 6])> {
+        let mut rows = vec![[const { String::new() }; 3]; 6];
+        let mut evt_field_mod_tracker = [false; 6];
+
+        for diff in diffs {
+            let idx = match diff.0 {
+                EventField::DateEnd => 2,
+                EventField::DateStart => 1,
+                EventField::Description => 5,
+                EventField::Location => 3,
+                EventField::Priority => 4,
+                EventField::Summary => 0,
+            };
+
+            let field_str = EVENT_FIELD_STR[idx];
+            evt_field_mod_tracker[idx] = true;
+            let diff_type = diff.1;
+
+            rows[idx] = match diff_type {
+                ChangeType::Deletion => {
+                    let value = event_field_to_str(&diff.0, old)?;
+                    [field_str.to_string(), value, "None".to_string()]
+                }
+                ChangeType::Insertion => {
+                    let value = event_field_to_str(&diff.0, new)?;
+                    [field_str.to_string(), "None".to_string(), value]
+                }
+                ChangeType::Modification => {
+                    let old_value = event_field_to_str(&diff.0, old)?;
+                    let new_value = event_field_to_str(&diff.0, new)?;
+                    [field_str.to_string(), old_value, new_value]
+                }
+            };
+        }
+
+        Ok((rows, evt_field_mod_tracker))
+    }
+
+    pub fn event_diff_to_str(
+        diffs: Vec<(EventField, ChangeType)>,
+        old: &Event,
+        new: &Event,
+    ) -> Result<String> {
+        let comparison_result = event_diff_to_comparison_rows(diffs, old, new)?;
+        let mut event_fields = comparison_result.0;
+        let evt_field_mod_tracker = comparison_result.1;
+
+        insert_unmodified_event_fields(old, &mut event_fields, evt_field_mod_tracker)?;
+
+        let mut table = Table::new();
+
+        for field in event_fields {
+            table.add_row(row![
+                field[0].as_str(),
+                field[1].as_str(),
+                field[2].as_str(),
+            ]);
+        }
+
+        Ok(table.to_string())
+    }
+
+    fn event_field_to_str(event_field: &EventField, event: &Event) -> Result<String> {
+        let value = match event_field {
+            EventField::DateEnd => {
+                let (end_date, end_time) = date_to_str(&event.get_end().unwrap())?;
+                format!("{end_date} {end_time}")
+            }
+
+            EventField::DateStart => {
+                let (start_date, start_time) = date_to_str(&event.get_start().unwrap())?;
+                format!("{start_date} {start_time}")
+            }
+
+            EventField::Description => {
+                let raw_str = event.get_description().unwrap().to_string();
+                trim_description(raw_str.as_str())
+            }
+
+            EventField::Location => event.get_location().unwrap().to_string(),
+            EventField::Priority => format!("{}", event.get_priority().unwrap()),
+            EventField::Summary => event.get_summary().unwrap().to_string(),
+        };
+
+        Ok(value)
+    }
+
+    pub fn event_to_str(event: &Event) -> Result<String> {
+        let summary = event.get_summary().unwrap_or("No Heading");
+        let (date, start) = match event.get_start() {
+            Some(d) => date_to_str(&d)?,
+            None => ("None".to_string(), "None".to_string()),
+        };
+        let (_, end) = match event.get_end() {
+            Some(d) => date_to_str(&d)?,
+            None => ("None".to_string(), "None".to_string()),
+        };
+        let location = event.get_location().unwrap_or("None");
+        let priority = match event.get_priority() {
+            Some(p) => p.to_string(),
+            None => "None".to_string(),
+        };
+        let description = event.get_description().unwrap_or("None");
+        let description = trim_description(description);
+
+        let mut table = Table::new();
+        table.add_row(row!["", summary]);
+        table.add_row(row!["date", date]);
+        table.add_row(row!["start", start]);
+        table.add_row(row!["end", end]);
+        table.add_row(row!["location", location]);
+        table.add_row(row!["priority", priority]);
+        table.add_row(row!["description", description]);
+
+        table.printstd();
+        Ok(table.to_string())
+    }
+
+    fn insert_unmodified_event_fields(
+        event: &Event,
+        event_fields: &mut Vec<[String; 3]>,
+        event_field_mod_tracker: [bool; 6],
+    ) -> Result<()> {
+        for (idx, field) in event_field_mod_tracker.iter().enumerate() {
+            if *field {
+                continue;
+            }
+
+            let field_str = EVENT_FIELD_STR[idx];
+            let event_field = match idx {
+                0 => Some(EventField::Summary),
+                1 => Some(EventField::DateStart),
+                2 => Some(EventField::DateEnd),
+                3 => Some(EventField::Location),
+                4 => Some(EventField::Priority),
+                5 => Some(EventField::Description),
+                _ => None,
+            };
+
+            let value = event_field_to_str(&event_field.unwrap(), event)?;
+            event_fields[idx] = [field_str.to_string(), value.clone(), value.clone()];
+        }
+
+        Ok(())
+    }
+
+    fn trim_description(description: &str) -> String {
+        let mut new_description = String::new();
+
+        for line in description.lines() {
+            let line_len = line.len();
+
+            let new_line = if line_len > MAX_CELL_WIDTH {
+                textwrap::fill(line, MAX_CELL_WIDTH)
+            } else {
+                line.to_string()
+            };
+
+            new_description.push_str(&new_line);
+            new_description.push('\n');
+        }
+
+        new_description
+    }
 }
