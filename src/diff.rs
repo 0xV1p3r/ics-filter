@@ -417,7 +417,6 @@ mod stringify {
         table.add_row(row!["priority", priority]);
         table.add_row(row!["description", description]);
 
-        table.printstd();
         Ok(table.to_string())
     }
 
