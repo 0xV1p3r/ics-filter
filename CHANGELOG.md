@@ -1,4 +1,7 @@
 # Changelog
+## 1.3.0
+ - made notification formatting optional
+---
 ## 1.2.1
  - bumped docker base image version
 ---
